@@ -44,6 +44,9 @@ def lines(story):
             for ln in m.get(key, []):
                 who = ln["who"]
                 add(ln["text"], who if who in ("narr", "smogi", "boss", "jjiri") else "friend")
+    for lst in story.get("fish", {}).values():
+        for f in (lst if isinstance(lst, list) else [lst]):
+            add(f["got"]); add(f["fact"])
     for v in story["msg"].values():
         for x in (v if isinstance(v, list) else [v]): add(x)
     return out

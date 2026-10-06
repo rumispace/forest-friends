@@ -1567,6 +1567,14 @@ function openBook() {
       grid.appendChild(el);
     }
   }
+  const fh = document.createElement('div'); fh.className = 'bookHead'; fh.textContent = '🎣 낚시 기록'; grid.appendChild(fh);
+  for (const kind of ['pond', 'stream', 'sea']) for (const f of FISH[kind]) {
+    const got = save.fishLog[f.id];
+    const el = document.createElement('div'); el.className = 'slot ' + (got ? 'found' : 'locked');
+    el.innerHTML = `<div class="ic">${f.emoji}</div><div>${got ? f.name : '???'}</div><div class="tag">${got ? '최고 ' + got + 'cm' : { pond: '연못', stream: '계곡', sea: '바다' }[kind]}</div>`;
+    if (got) el.onclick = () => speak([f.got, f.fact]);
+    grid.appendChild(el);
+  }
   $('#book').classList.remove('hide');
 }
 $('#bookBtn').onclick = openBook;
@@ -1906,7 +1914,7 @@ const HOLD_SEC = 1.3, JOY_R = 70;
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
 tapMark.rotation.x = -Math.PI / 2; tapMark.renderOrder = 3; scene.add(tapMark);
 
-function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide'); }
+function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide') || !$('#fish').classList.contains('hide'); }
 function setNdc(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); }
 function pickCreature() {
   const hits = ray.intersectObjects(creatures.filter(c => c.appear > 0.5).map(c => c.hit), false);
@@ -2144,6 +2152,8 @@ function drawMini(t) {
   mctx.font = `${Math.round(miniSize * 0.12)}px sans-serif`;
   for (const g of Object.values(gates)) if (!g.open) { const [x, y] = M(g.pos.x, g.pos.z); mctx.fillText('🔒', x, y); }
   for (const a of Object.values(actors)) if (a.state !== 'off') { const [x, y] = M(a.pos.x, a.pos.z); mctx.fillText(a.icon, x, y); }
+  for (const sp of FISH_SPOTS) { const [x, y] = M(sp.x, sp.z); mctx.fillText('🎣', x, y); }
+  for (const c of chests) if (!c.opened) { const [x, y] = M(c.x, c.z); mctx.fillText('🎁', x, y); }
   mctx.font = `${Math.round(miniSize * 0.1)}px sans-serif`;
   for (const c of creatures) if (save.found[c.id] && c.appear > 0.5) { const [x, y] = M(c.anchor.x, c.anchor.z); mctx.fillText(c.def.emoji, x, y); }
   for (const it of items) if (!it.got) { const [x, y] = M(it.pos.x, it.pos.z); mctx.fillStyle = '#ffd23f'; mctx.beginPath(); mctx.arc(x, y, miniSize * 0.025, 0, 7); mctx.fill(); }
@@ -2461,6 +2471,161 @@ function updateMusic() {
   });
 }
 
+// ───────── 낚시: 연못 · 계곡 · 바다 (잡으면 특징을 듣고 놓아준다) ─────────
+const FISH = STORY.fish;
+const FISH_SPOTS = [
+  { kind: 'pond', x: 15, z: 17.7, face: 0, name: '연못' },
+  { kind: 'stream', x: -18, z: -55.8, face: 0, name: '계곡' },
+  { kind: 'sea', x: 74.5, z: 10, face: -Math.PI / 2, name: '바다' },
+];
+save.fishLog = save.fishLog || {};
+// 나무 발판 + 낚시 이정표
+for (const sp of FISH_SPOTS) {
+  const g = new THREE.Group();
+  for (let i = 0; i < 4; i++) { const pl = mesh(new THREE.BoxGeometry(1.6, 0.08, 0.36), mat(0xb98a55)); pl.position.set(0, 0.05, -0.2 - i * 0.42); g.add(pl); }
+  for (const x of [-0.7, 0.7]) g.add(at(cyl(0.06, 0.06, 0.7, 0x8a5a2b, 5), x, -0.15, -1.5));
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.5), new THREE.MeshStandardMaterial({ map: signTex('🎣'), side: THREE.DoubleSide }));
+  sign.position.set(0.95, 1.2, 0.3); g.add(sign); g.add(at(cyl(0.05, 0.05, 1.2, 0x8a5a2b, 5), 0.95, 0.6, 0.3));
+  g.position.set(sp.x, Math.max(0, groundH(sp.x, sp.z)), sp.z); g.rotation.y = sp.face; scene.add(g);
+  sp.told = false;
+}
+function nearFishSpot() {
+  const bp = boy.group.position;
+  return FISH_SPOTS.find(sp => flatDist(bp, sp) < 2.4 && walkable(sp.x, sp.z)) || null;
+}
+const fishCv = $('#fishCanvas'), fctx = fishCv.getContext('2d');
+let fishing = null; // { spot, state, t, wait, bx, by, ripples[], reel, catch }
+function openFishing(sp) {
+  if (riding) dismount();
+  fishing = { spot: sp, state: 'ready', t: 0, bx: 0.6, by: 0.62, ripples: [], reel: 0, nibble: 0 };
+  $('#fishCatch').classList.add('hide'); $('#reelWrap').classList.add('hide');
+  $('#fish').classList.remove('hide'); paintFishCount();
+  fishMsg(MSG.fishReady, true);
+}
+function paintFishCount() {
+  const all = ['pond', 'stream', 'sea'].flatMap(k => FISH[k]);
+  $('#fishCount').textContent = `잡아 본 물고기 ${all.filter(f => save.fishLog[f.id]).length} / ${all.length}`;
+}
+function fishMsg(text, voice) { $('#fishMsg').textContent = text; if (voice) speak(text); }
+function pickFish(kind) {
+  const list = [...FISH[kind], FISH.junk];
+  let tot = list.reduce((a, f) => a + f.w, 0), r = Math.random() * tot;
+  for (const f of list) { r -= f.w; if (r <= 0) return f; }
+  return list[0];
+}
+function fishTap() {
+  const f = fishing; if (!f) return;
+  if (f.state === 'ready') {
+    f.state = 'cast'; f.t = 0; f.bx = 0.45 + Math.random() * 0.35; f.by = 0.55 + Math.random() * 0.15;
+    f.wait = 1.8 + Math.random() * 2.8; tone(500, 0.25, 'sine', 0.1, 0, 220);
+    fishMsg(MSG.fishCast, !save.toldCast); save.toldCast = true; return;
+  }
+  if (f.state === 'cast' || f.state === 'wait') { f.state = 'ready'; fishMsg(MSG.fishEarly, true); return; }
+  if (f.state === 'bite') {
+    f.state = 'reel'; f.t = 0; f.reel = 0.15; f.catch = pickFish(f.spot.kind);
+    $('#reelWrap').classList.remove('hide'); fishMsg(MSG.fishReel, true); sfx.pop(); return;
+  }
+  if (f.state === 'reel') {
+    f.reel = Math.min(1, f.reel + 0.13); tone(700 + f.reel * 500, 0.06, 'triangle', 0.1);
+    if (f.reel >= 1) landFish();
+  }
+}
+function landFish() {
+  const f = fishing, c = f.catch;
+  f.state = 'caught'; $('#reelWrap').classList.add('hide');
+  sfx.splash(); sfx.chime();
+  const isJunk = c.id === 'junk';
+  const size = isJunk ? 0 : Math.round(c.min + Math.random() * (c.max - c.min));
+  const isNew = !isJunk && !save.fishLog[c.id];
+  if (!isJunk) save.fishLog[c.id] = Math.max(save.fishLog[c.id] || 0, size);
+  persist(); paintFishCount();
+  $('#fcEmoji').textContent = c.emoji; $('#fcName').textContent = (isNew ? '🆕 ' : '') + c.name;
+  $('#fcSize').textContent = isJunk ? '물이 깨끗해졌어요 ✨' : `${size}cm`;
+  $('#fcFact').textContent = c.fact;
+  $('#fcRelease').textContent = isJunk ? '🗑️ 버리기' : '💚 놓아주기';
+  $('#fishCatch').classList.remove('hide');
+  speak(isNew ? [MSG.fishNew, c.got, c.fact] : [c.got, c.fact]);
+  addStars(isNew ? 5 : isJunk ? 1 : 2);
+  fishMsg(c.got);
+}
+$('#fcRelease').addEventListener('click', e => {
+  e.stopPropagation(); sfx.pop(); hush();
+  const junk = fishing && fishing.catch && fishing.catch.id === 'junk';
+  $('#fishCatch').classList.add('hide');
+  if (!junk) { fishing.ripples.push({ x: 0.5, y: 0.7, r: 0, a: 1 }); fishMsg(MSG.fishRelease, true); }
+  fishing.state = 'ready';
+  setTimeout(() => { if (fishing && fishing.state === 'ready') fishMsg(MSG.fishReady); }, 2200);
+});
+$('#fish').addEventListener('pointerdown', e => {
+  if (e.target.closest('#fishClose') || e.target.closest('#fishCatch')) return;
+  e.preventDefault(); fishTap();
+});
+$('#fishClose').addEventListener('click', () => { sfx.pop(); hush(); $('#fish').classList.add('hide'); fishing = null; });
+$('#fishBtn').addEventListener('pointerdown', e => { e.preventDefault(); const sp = nearFishSpot(); if (sp && !blocked()) { sfx.pop(); openFishing(sp); } });
+
+function updateFishing(dt, t) {
+  // 낚시터 근처면 낚시 버튼
+  const sp = playing && !blocked() ? nearFishSpot() : null;
+  $('#fishBtn').classList.toggle('hide', !sp);
+  if (sp && !sp.told) { sp.told = true; say(MSG.fishSpot, true, 3000); }
+  const f = fishing; if (!f) return;
+  f.t += dt;
+  if (f.state === 'cast' && f.t > 0.6) { f.state = 'wait'; f.t = 0; f.ripples.push({ x: f.bx, y: f.by, r: 0, a: 1 }); tone(300, 0.15, 'sine', 0.08); }
+  if (f.state === 'wait') {
+    if (Math.random() < dt * 0.8) { f.nibble = 0.25; tone(900, 0.04, 'sine', 0.05); }
+    if (f.t > f.wait) { f.state = 'bite'; f.t = 0; f.ripples.push({ x: f.bx, y: f.by, r: 0, a: 1 }, { x: f.bx, y: f.by, r: 0.03, a: 1 }); sfx.splash(); fishMsg(MSG.fishNow, true); }
+  }
+  if (f.state === 'bite' && f.t > 1.5) { f.state = 'ready'; fishMsg(MSG.fishMiss, true); }
+  if (f.state === 'reel') {
+    f.reel = Math.max(0, f.reel - dt * 0.12); // 물고기가 살살 당긴다
+    $('#reelBar').style.width = (f.reel * 100) + '%';
+    if (f.t > 9) { f.state = 'ready'; $('#reelWrap').classList.add('hide'); fishMsg(MSG.fishMiss, true); }
+  }
+  f.nibble = Math.max(0, f.nibble - dt);
+  drawFishing(t);
+}
+function drawFishing(t) {
+  const f = fishing, w = fishCv.clientWidth, h = fishCv.clientHeight; if (!w || !h) return;
+  const dpr = Math.min(devicePixelRatio, 2);
+  if (fishCv.width !== Math.round(w * dpr)) { fishCv.width = Math.round(w * dpr); fishCv.height = Math.round(h * dpr); }
+  const c = fctx; c.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const kind = f.spot.kind, horizon = h * (kind === 'sea' ? 0.3 : 0.34);
+  // 하늘
+  let g = c.createLinearGradient(0, 0, 0, horizon); g.addColorStop(0, nightK > 0.5 ? '#2b3560' : '#9fd8ff'); g.addColorStop(1, nightK > 0.5 ? '#4a5585' : '#d8f0ff');
+  c.fillStyle = g; c.fillRect(0, 0, w, horizon);
+  // 건너편 둑
+  if (kind === 'pond') { c.fillStyle = '#6fae4a'; c.beginPath(); c.moveTo(0, horizon); for (let x = 0; x <= w; x += 20) c.lineTo(x, horizon - 18 - Math.sin(x * 0.02) * 10); c.lineTo(w, horizon); c.fill(); c.fillStyle = '#3f7f35'; for (let x = 20; x < w; x += 70) { c.beginPath(); c.arc(x, horizon - 30, 16, 0, 7); c.fill(); } }
+  else if (kind === 'stream') { c.fillStyle = '#5b8f4a'; c.fillRect(0, horizon - 26, w, 26); c.fillStyle = '#9aa09a'; for (let x = 10; x < w; x += 46) { c.beginPath(); c.ellipse(x, horizon - 4, 18, 10, 0, 0, 7); c.fill(); } }
+  else { c.fillStyle = '#7fc3e6'; c.fillRect(0, horizon - 2, w, 2); }
+  // 물
+  g = c.createLinearGradient(0, horizon, 0, h); g.addColorStop(0, kind === 'sea' ? '#4aa3d1' : '#6cbfd9'); g.addColorStop(1, kind === 'sea' ? '#1f6f9e' : '#3a8fb0');
+  c.fillStyle = g; c.fillRect(0, horizon, w, h - horizon);
+  c.strokeStyle = 'rgba(255,255,255,.25)'; c.lineWidth = 2;
+  for (let i = 0; i < 7; i++) { const y = horizon + 18 + i * (h - horizon) / 7, off = (t * 20 + i * 37) % 80; c.beginPath(); for (let x = -80 + off; x < w; x += 80) { c.moveTo(x, y); c.quadraticCurveTo(x + 20, y - 4, x + 40, y); } c.stroke(); }
+  // 고리 물결
+  for (let i = f.ripples.length - 1; i >= 0; i--) { const r = f.ripples[i]; r.r += 0.0011; r.a -= 0.018; if (r.a <= 0) { f.ripples.splice(i, 1); continue; } c.strokeStyle = `rgba(255,255,255,${r.a})`; c.lineWidth = 2; c.beginPath(); c.ellipse(r.x * w, r.y * h, r.r * w, r.r * w * 0.35, 0, 0, 7); c.stroke(); }
+  // 낚싯대 · 줄 · 찌
+  const tipX = w * 0.14, tipY = h * 0.22;
+  c.strokeStyle = '#7a4a1f'; c.lineWidth = 6; c.lineCap = 'round'; c.beginPath(); c.moveTo(w * 0.02, h * 1.02); c.lineTo(tipX, tipY); c.stroke();
+  const out = f.state !== 'ready' && f.state !== 'caught';
+  if (out) {
+    let bx = f.bx * w, by = f.by * h;
+    if (f.state === 'cast') { const k = Math.min(1, f.t / 0.6); bx = tipX + (bx - tipX) * k; by = tipY + (by - tipY) * k - Math.sin(k * Math.PI) * h * 0.25; }
+    let dip = 0;
+    if (f.state === 'wait') dip = Math.sin(t * 3) * 1.5 + (f.nibble > 0 ? Math.sin(f.nibble * 40) * 4 : 0);
+    if (f.state === 'bite') dip = 12;
+    if (f.state === 'reel') { dip = 8 + Math.sin(t * 14) * 3; bx += Math.sin(t * 2.3) * w * 0.08 * (1 - f.reel); by += (h * 0.92 - by) * f.reel * 0.6; }
+    c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 1.5; c.beginPath(); c.moveTo(tipX, tipY); c.quadraticCurveTo((tipX + bx) / 2, Math.min(tipY, by) + 30, bx, by + dip - 8); c.stroke();
+    if (f.state === 'reel') { c.fillStyle = 'rgba(20,40,60,.45)'; c.beginPath(); c.ellipse(bx + 10, by + 22, 34, 11, Math.sin(t * 3) * 0.3, 0, 7); c.fill(); }
+    // 찌 (빨강·흰색), 물에 잠기면 아래가 가려진다
+    c.save(); c.beginPath(); c.rect(0, 0, w, by + 4); c.clip();
+    c.fillStyle = '#e2533f'; c.beginPath(); c.arc(bx, by + dip - 8, 8, Math.PI, 0); c.fill();
+    c.fillStyle = '#ffffff'; c.beginPath(); c.arc(bx, by + dip - 8, 8, 0, Math.PI); c.fill();
+    c.restore();
+    if (f.state === 'bite') { c.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 6; i++) { const a = t * 6 + i; c.beginPath(); c.arc(bx + Math.cos(a) * 16, by - 6 - Math.abs(Math.sin(a * 1.3)) * 14, 3, 0, 7); c.fill(); } }
+  }
+}
+
 // ───────── 날씨: 2부엔 먹구름·비, 눈 덮인 산엔 눈 (깜빡임 없이 천천히) ─────────
 const STORM_FROM = MISSIONS.findIndex(m => m.storm);
 const rain = (() => {
@@ -2726,7 +2891,8 @@ function frame() {
 
   // 미니게임·악당
   updateItems(dt, t); updateClouds(dt, t); updateSumo(dt, t);
-  updateStars(dt, t); updateChests(dt, t); updateSparks(dt); updateMusic();
+  updateStars(dt, t); updateChests(dt, t); updateSparks(dt); updateMusic(); updateFishing(dt, t);
+  $('#actBtns').classList.toggle('hide', !playing || blocked()); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
   if (smogiHurt > 0) smogiHurt = Math.max(0, smogiHurt - dt * 0.6);
   const bossWho = cur() && cur().type === 'boss' ? (cur().villain || 'smogi') : null;
   for (const [who, v] of Object.entries(actors)) {
@@ -2810,7 +2976,18 @@ frame();
 
 // ───────── 시작·설정 ─────────
 refreshHud();
+// 시작할 때 전체 화면 + 가로 고정 (안드로이드 크롬 등에서 됨. 아이폰 사파리는 홈 화면 추가로)
+function goFullscreen() {
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+  if (!req || document.fullscreenElement || document.webkitFullscreenElement) return;
+  try {
+    const p = req.call(el, { navigationUI: 'hide' });
+    if (p && p.then) p.then(() => { try { screen.orientation && screen.orientation.lock && screen.orientation.lock('landscape').catch(() => {}); } catch (e) {} }).catch(() => {});
+  } catch (e) {}
+}
 $('#startBtn').onclick = () => {
+  if (document.body.classList.contains('phone')) goFullscreen();
   initAudio(); sfx.pop(); preloadVoices();
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } // iOS 음성 잠금 풀기
   $('#title').classList.add('hide'); playing = true; $('#actBtns').classList.remove('hide'); paintWallet();
@@ -2839,4 +3016,4 @@ $('#setReset').onclick = () => { if (confirm('도감과 진행을 모두 지우�
 $('#setClose').onclick = () => $('#settings').classList.add('hide');
 
 // 시험용 (부모 확인)
-window.__game = { renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };
+window.__game = { openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };

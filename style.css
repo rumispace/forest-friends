@@ -105,7 +105,7 @@ button { font-family: inherit; cursor: pointer; border: 0; }
 @media (max-height: 500px) { #title h1 { font-size: 50px; margin-bottom: 16px; } .titleEmoji { font-size: 44px; } }
 
 /* 좁은 화면(휴대폰): 미니맵 작게, 미션 카드는 아래로 */
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   #mini { width: 112px; height: 112px; }
   .pill { font-size: 17px; padding: 7px 12px; }
   #mission { top: auto; bottom: calc(env(safe-area-inset-bottom) + 16px); left: 12px; right: 12px; max-width: none; transform: none; }
@@ -154,7 +154,7 @@ button { font-family: inherit; cursor: pointer; border: 0; }
 .sumoPanel p { font-size: 22px; margin: 4px 0 0; }
 #sumo { touch-action: none; }
 
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   #talk { bottom: calc(env(safe-area-inset-bottom) + 12px); padding: 10px 12px; gap: 10px; }
   #talkIcon { font-size: 40px; } #talkText { font-size: 20px; }
   #gems { font-size: 17px; padding: 5px 10px; }
@@ -199,9 +199,78 @@ button { font-family: inherit; cursor: pointer; border: 0; }
 .citem.owned .pr { color: #3d8b3d; }
 .citem.worn { border-color: #5cb85c; background: #effbe9; }
 .citem.poor { opacity: .55; }
-@media (max-width: 760px) {
+@media (max-width: 760px) and (orientation: portrait) {
   #actBtns { bottom: calc(env(safe-area-inset-bottom) + 112px); right: 12px; gap: 10px; }
   .act { width: 70px; height: 70px; font-size: 30px; }
   #wallet { font-size: 17px; padding: 5px 10px; }
 }
 @media (max-height: 560px) and (orientation: landscape) { .act { width: 64px; height: 64px; font-size: 28px; } }
+
+/* ───── 휴대폰 가로 (높이가 낮은 화면): 작고 겹치지 않게 ───── */
+@media (orientation: landscape) and (max-height: 500px) {
+  #hud { padding-top: calc(env(safe-area-inset-top) + 6px); }
+  .left { gap: 4px; }
+  #mini { width: 78px; height: 78px; border-width: 3px; }
+  .pill { font-size: 13px; padding: 3px 9px; gap: 6px; box-shadow: 0 2px 0 rgba(0,0,0,.12); }
+  #gems, #wallet { font-size: 13px; padding: 3px 9px; }
+  .round { width: 40px; height: 40px; font-size: 20px; box-shadow: 0 3px 0 rgba(0,0,0,.15); }
+  .right { gap: 6px; }
+  #mission { top: calc(env(safe-area-inset-top) + 6px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); max-width: 52vw; padding: 4px 6px 4px 10px; gap: 8px; border-width: 3px; border-radius: 16px; }
+  #mission:active { transform: translateX(-50%) translateY(2px); }
+  #mIcon { font-size: 24px; } #mText { font-size: 15px; } #mStep { font-size: 10px; }
+  .mGo { font-size: 16px; padding: 3px 7px; border-radius: 12px; box-shadow: 0 3px 0 #3d8b3d; } .mGo small { font-size: 9px; }
+  #msg { top: calc(env(safe-area-inset-top) + 56px); bottom: auto; left: 50%; right: auto; transform: translateX(-50%); max-width: 56vw; font-size: 14px; padding: 5px 12px; border-width: 3px; border-radius: 16px; gap: 6px; }
+  #msg .who { font-size: 18px; }
+  #actBtns { flex-direction: row; right: calc(env(safe-area-inset-right) + 10px); bottom: calc(env(safe-area-inset-bottom) + 10px); gap: 10px; }
+  .act { width: 58px; height: 58px; font-size: 24px; box-shadow: 0 4px 0 rgba(0,0,0,.18); } .act small { font-size: 11px; }
+  #gear { bottom: 4px; left: 6px; font-size: 18px; }
+  #talk { width: min(72vw, 640px); padding: 6px 12px; gap: 10px; border-width: 4px; border-radius: 18px; bottom: calc(env(safe-area-inset-bottom) + 8px); }
+  #talkIcon { font-size: 30px; } #talkText { font-size: 16px; } #talkName { font-size: 12px; }
+  #ring { width: 84px; height: 84px; margin: -42px 0 0 -42px; }
+  .overlay { padding: 8px; }
+  .panel { border-width: 4px; border-radius: 20px; max-height: calc(100vh - 16px); }
+  .btn { font-size: 18px; padding: 8px 18px; border-radius: 16px; }
+  .itemPanel { padding: 12px; } .itemIcon { font-size: 50px; } .itemPanel h2 { font-size: 22px; } .itemPanel p { font-size: 16px; margin: 4px 0 10px; }
+  .bookPanel h2, .closetPanel h2 { font-size: 22px; margin-bottom: 6px; }
+  #bookGrid { grid-template-columns: repeat(6, 1fr); gap: 6px; } .slot { font-size: 13px; padding: 4px 2px; border-width: 3px; } .slot .ic { font-size: 30px; } .slot .tag { font-size: 10px; }
+  .tab { font-size: 16px; padding: 4px 14px; } #closetGrid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; } .citem { font-size: 13px; padding: 4px; border-width: 3px; } .citem .ic { font-size: 30px; } .citem .pr { font-size: 12px; }
+  .sumoPanel h2, .simonPanel h2 { font-size: 20px; } #sumoCanvas { height: 130px; } .sumoPanel p { font-size: 15px; } #simonMsg { font-size: 16px; margin: 2px 0 6px; min-height: 0; }
+  .simonPanel { width: min(70vw, 520px); padding: 8px 12px 12px; } .sb { aspect-ratio: 2.4; font-size: 30px; border-radius: 16px; } .simonGrid { gap: 8px; }
+  #title h1 { font-size: 40px; margin: 4px 0 12px; } .titleEmoji { font-size: 34px; } .btn.big { font-size: 24px; padding: 10px 28px; } .sub { font-size: 14px; margin-top: 8px; }
+}
+
+/* 휴대폰을 세로로 들면: 옆으로 돌려 달라고 */
+#rotate { display: none; position: fixed; inset: 0; z-index: 50; background: linear-gradient(#bfe6ff, #d8f2c8); flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 24px; }
+#rotate .ph { font-size: 80px; animation: tilt 2.4s ease-in-out infinite; }
+@keyframes tilt { 0%, 30% { transform: rotate(0); } 60%, 100% { transform: rotate(-90deg); } }
+#rotate h2 { font-size: 28px; color: #3f7a2a; margin: 18px 0 8px; }
+#rotate p { font-size: 17px; color: #557; line-height: 1.5; }
+@media (orientation: portrait) and (max-width: 600px) { body.phone #rotate { display: flex; } }
+
+/* 홈 화면 추가 안내 (아이폰) */
+#homeTip { font-size: 15px; color: #446; margin-top: 10px; display: none; }
+body.iosweb #homeTip { display: block; }
+
+/* 낚시 */
+.fishPanel { width: min(94vw, 760px); padding: 12px 16px 14px; text-align: center; touch-action: none; }
+.fishTop { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.fishTop h2 { font-size: 30px; margin: 0; color: #6b3f12; }
+#fishCount { font-size: 18px; color: #2f6fe0; flex: 1; text-align: left; }
+.btn.small { font-size: 18px; padding: 6px 16px; }
+.fishStage { position: relative; margin: 10px 0 6px; }
+#fishCanvas { width: 100%; height: 320px; display: block; border-radius: 18px; }
+#fishMsg { font-size: 24px; margin: 6px 0 4px; min-height: 30px; }
+.reelWrap { height: 22px; background: #d6e6f0; border-radius: 11px; overflow: hidden; margin: 4px 0; }
+#reelBar { height: 100%; width: 0; background: linear-gradient(90deg, #4da6ff, #5cd65c); border-radius: 11px; transition: width .1s; }
+#fishCatch { position: absolute; inset: 8% 14%; background: rgba(255,250,240,.97); border-radius: 22px; border: 5px solid #f3d38b; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; padding: 10px; animation: pop .3s ease-out; }
+#fcEmoji { font-size: 70px; line-height: 1.1; }
+#fcName { font-size: 30px; color: #6b3f12; }
+#fcSize { font-size: 18px; color: #2f6fe0; }
+#fcFact { font-size: 20px; line-height: 1.35; word-break: keep-all; margin-bottom: 6px; }
+.fishAct { background: #dff3ff; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .fishPanel { padding: 6px 10px 8px; width: min(96vw, 760px); }
+  .fishTop h2 { font-size: 18px; } #fishCount { font-size: 13px; } .btn.small { font-size: 14px; padding: 4px 10px; }
+  #fishCanvas { height: 170px; } #fishMsg { font-size: 16px; min-height: 20px; margin: 2px 0; } .reelWrap { height: 14px; }
+  #fcEmoji { font-size: 40px; } #fcName { font-size: 20px; } #fcSize { font-size: 13px; } #fcFact { font-size: 14px; }
+}

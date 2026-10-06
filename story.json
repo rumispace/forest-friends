@@ -1149,7 +1149,32 @@
     "fishMiss": "물고기가 도망갔어요. 다시 해 봐요!",
     "fishReel": "톡톡톡 눌러서 끌어올려요!",
     "fishRelease": "잘 가! 다시 물로 돌려보냈어요.",
-    "fishNew": "새로운 물고기예요!"
+    "fishNew": "새로운 물고기예요!",
+    "buddyOn": "이제 같이 다녀요! 신난다!",
+    "buddyOff": "집으로 돌려보냈어요. 또 만나!",
+    "boardTitle": "탐험 게시판",
+    "questDone": "의뢰 완료! 참 잘했어요!",
+    "questNew": "새 의뢰가 생겼어요!",
+    "questPick": "이 의뢰를 할게요!",
+    "visitorsHere": "오늘은 손님 친구들이 놀러 왔어요! 탐험 게시판을 확인해 봐요.",
+    "newDay": "새로운 하루예요! 별과 보물상자가 다시 생겼어요.",
+    "rankUp": "탐험가 등급이 올랐어요!",
+    "notHereNow": "이 친구는 지금 다른 곳에 놀러 갔어요. 다음에 또 만나요!",
+    "rank_0": "새싹 탐험가가 되었어요!",
+    "rank_1": "풀잎 탐험가가 되었어요!",
+    "rank_2": "도토리 탐험가가 되었어요!",
+    "rank_3": "나무 탐험가가 되었어요!",
+    "rank_4": "숲 탐험가가 되었어요!",
+    "rank_5": "계곡 탐험가가 되었어요!",
+    "rank_6": "바다 탐험가가 되었어요!",
+    "rank_7": "동굴 탐험가가 되었어요!",
+    "rank_8": "갯벌 탐험가가 되었어요!",
+    "rank_9": "눈꽃 탐험가가 되었어요!",
+    "rank_10": "무지개 탐험가가 되었어요!",
+    "rank_11": "해님 탐험가가 되었어요!",
+    "rank_12": "달님 탐험가가 되었어요!",
+    "rank_13": "별빛 탐험가가 되었어요!",
+    "rank_14": "전설의 탐험가가 되었어요!"
   },
   "speakers": {
     "narr": {
@@ -1423,5 +1448,776 @@
       "got": "쓰레기를 건졌어요!",
       "w": 2
     }
-  }
+  },
+  "visitors": [
+    {
+      "id": "butterfly",
+      "name": "호랑나비",
+      "emoji": "🦋",
+      "region": "forest",
+      "time": "day",
+      "move": "fly",
+      "visitor": true,
+      "spots": [
+        [
+          -4,
+          14
+        ],
+        [
+          12,
+          -10
+        ],
+        [
+          -20,
+          -14
+        ],
+        [
+          22,
+          4
+        ]
+      ],
+      "intro": "손님 친구 호랑나비를 만났어요!",
+      "arrive": "호랑나비가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "날개에 호랑이처럼 줄무늬가 있어서 호랑나비예요.",
+        "긴 빨대 같은 입으로 꽃꿀을 빨아 먹어요.",
+        "애벌레는 귤나무나 산초나무 잎을 먹고 자라요."
+      ]
+    },
+    {
+      "id": "bee",
+      "name": "꿀벌",
+      "emoji": "🐝",
+      "region": "forest",
+      "time": "day",
+      "move": "fly",
+      "visitor": true,
+      "spots": [
+        [
+          6,
+          18
+        ],
+        [
+          -14,
+          -2
+        ],
+        [
+          18,
+          6
+        ],
+        [
+          -6,
+          -20
+        ]
+      ],
+      "intro": "손님 친구 꿀벌을 만났어요!",
+      "arrive": "꿀벌이 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "꽃꿀과 꽃가루를 모아서 꿀을 만들어요.",
+        "춤을 춰서 친구들에게 꽃이 있는 곳을 알려 줘요.",
+        "한 벌집에 여왕벌은 한 마리뿐이에요."
+      ]
+    },
+    {
+      "id": "mantis",
+      "name": "사마귀",
+      "emoji": "🦗",
+      "region": "forest",
+      "time": "day",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          -18,
+          10
+        ],
+        [
+          24,
+          -8
+        ],
+        [
+          4,
+          -26
+        ],
+        [
+          -24,
+          4
+        ]
+      ],
+      "intro": "손님 친구 사마귀를 만났어요!",
+      "arrive": "사마귀가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "앞다리가 낫처럼 생겨서 먹이를 꽉 잡아요.",
+        "세모난 머리를 이리저리 돌려서 잘 살펴봐요.",
+        "가을에 거품 같은 알집을 만들어 알을 지켜요."
+      ]
+    },
+    {
+      "id": "hedgehog",
+      "name": "고슴도치",
+      "emoji": "🦔",
+      "region": "forest",
+      "time": "night",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          -10,
+          18
+        ],
+        [
+          20,
+          -22
+        ],
+        [
+          -22,
+          -18
+        ],
+        [
+          8,
+          24
+        ]
+      ],
+      "intro": "손님 친구 고슴도치를 만났어요!",
+      "arrive": "고슴도치가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "등에 뾰족한 가시가 잔뜩 있어요.",
+        "위험하면 몸을 공처럼 동그랗게 말아요.",
+        "밤에 나와서 벌레를 잡아먹어요."
+      ]
+    },
+    {
+      "id": "woodpecker",
+      "name": "오색딱따구리",
+      "emoji": "🐦",
+      "region": "forest",
+      "time": "day",
+      "move": "fly",
+      "visitor": true,
+      "spots": [
+        [
+          -16,
+          -22
+        ],
+        [
+          26,
+          10
+        ],
+        [
+          2,
+          -28
+        ],
+        [
+          -27,
+          8
+        ]
+      ],
+      "intro": "손님 친구 오색딱따구리를 만났어요!",
+      "arrive": "오색딱따구리가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "부리로 나무를 두드려서 구멍을 뚫어요.",
+        "긴 혀로 나무 속에 숨은 벌레를 꺼내 먹어요.",
+        "나무에 구멍을 파서 둥지를 만들어요."
+      ]
+    },
+    {
+      "id": "firefly",
+      "name": "반딧불이",
+      "emoji": "✨",
+      "region": "forest",
+      "time": "night",
+      "move": "fly",
+      "visitor": true,
+      "spots": [
+        [
+          -8,
+          -14
+        ],
+        [
+          14,
+          20
+        ],
+        [
+          -24,
+          12
+        ],
+        [
+          10,
+          -20
+        ]
+      ],
+      "intro": "손님 친구 반딧불이를 만났어요!",
+      "arrive": "반딧불이가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "배 끝에서 반짝반짝 빛을 내요.",
+        "빛을 깜빡여서 서로 신호를 보내요.",
+        "애벌레는 물가에서 다슬기나 달팽이를 먹고 자라요."
+      ]
+    },
+    {
+      "id": "treefrog",
+      "name": "청개구리",
+      "emoji": "🐸",
+      "region": "forest",
+      "time": "any",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          11,
+          16.8
+        ],
+        [
+          18.5,
+          13
+        ],
+        [
+          15,
+          9.4
+        ]
+      ],
+      "intro": "손님 친구 청개구리를 만났어요!",
+      "arrive": "청개구리가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "발가락 끝에 빨판이 있어서 나뭇잎에 착 달라붙어요.",
+        "주변 색에 따라 몸 색을 바꿀 수 있어요.",
+        "비 오는 날이면 개굴개굴 많이 울어요."
+      ]
+    },
+    {
+      "id": "otter",
+      "name": "수달",
+      "emoji": "🦦",
+      "region": "valley",
+      "time": "day",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          -6,
+          -56
+        ],
+        [
+          24,
+          -55
+        ],
+        [
+          -24,
+          -52
+        ]
+      ],
+      "intro": "손님 친구 수달을 만났어요!",
+      "arrive": "수달이 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "천연기념물이자 멸종위기 동물이에요.",
+        "발에 물갈퀴가 있어서 헤엄을 아주 잘 쳐요.",
+        "깨끗한 강과 계곡에 살아요."
+      ]
+    },
+    {
+      "id": "damselfly",
+      "name": "물잠자리",
+      "emoji": "🪰",
+      "region": "valley",
+      "time": "day",
+      "move": "fly",
+      "visitor": true,
+      "spots": [
+        [
+          -14,
+          -55
+        ],
+        [
+          10,
+          -56
+        ],
+        [
+          2,
+          -52
+        ]
+      ],
+      "intro": "손님 친구 물잠자리를 만났어요!",
+      "arrive": "물잠자리가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "수컷은 날개가 까맣고 몸은 반짝이는 초록색이에요.",
+        "맑은 개울가 풀숲에 살아요.",
+        "애벌레는 물속에서 자라요."
+      ]
+    },
+    {
+      "id": "strider",
+      "name": "소금쟁이",
+      "emoji": "🕷️",
+      "region": "valley",
+      "time": "day",
+      "move": "water",
+      "visitor": true,
+      "spots": [
+        [
+          -22,
+          -59.5
+        ],
+        [
+          18,
+          -60
+        ],
+        [
+          -2,
+          -61
+        ]
+      ],
+      "intro": "손님 친구 소금쟁이를 만났어요!",
+      "arrive": "소금쟁이가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "다리에 난 가는 털 덕분에 물 위를 걸어 다녀요.",
+        "물에 떨어진 벌레를 잡아먹어요.",
+        "다리로 물결을 느껴서 먹이가 있는 곳을 알아요."
+      ]
+    },
+    {
+      "id": "gull",
+      "name": "괭이갈매기",
+      "emoji": "🕊️",
+      "region": "beach",
+      "time": "day",
+      "move": "fly",
+      "visitor": true,
+      "spots": [
+        [
+          52,
+          4
+        ],
+        [
+          66,
+          -4
+        ],
+        [
+          58,
+          -16
+        ],
+        [
+          70,
+          14
+        ]
+      ],
+      "intro": "손님 친구 괭이갈매기를 만났어요!",
+      "arrive": "괭이갈매기가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "고양이처럼 야옹 하고 울어서 괭이갈매기예요.",
+        "바닷가 바위섬에 모여서 알을 낳아요.",
+        "바다에서 물고기를 잡아먹어요."
+      ]
+    },
+    {
+      "id": "jellyfish",
+      "name": "해파리",
+      "emoji": "🪼",
+      "region": "beach",
+      "time": "day",
+      "move": "water",
+      "visitor": true,
+      "spots": [
+        [
+          80,
+          -10
+        ],
+        [
+          82,
+          4
+        ],
+        [
+          79,
+          14
+        ]
+      ],
+      "intro": "손님 친구 해파리를 만났어요!",
+      "arrive": "해파리가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "몸의 대부분이 물로 되어 있어요.",
+        "뇌가 없어요.",
+        "촉수에 쏘이면 아프니까 눈으로만 봐야 해요."
+      ]
+    },
+    {
+      "id": "egret",
+      "name": "백로",
+      "emoji": "🦢",
+      "region": "flat",
+      "time": "day",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          -18,
+          62
+        ],
+        [
+          10,
+          70
+        ],
+        [
+          20,
+          58
+        ]
+      ],
+      "intro": "손님 친구 백로를 만났어요!",
+      "arrive": "백로가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "하얀 깃털에 목과 다리가 길어요.",
+        "얕은 물을 천천히 걸으며 물고기를 잡아요.",
+        "여러 마리가 함께 모여 둥지를 지어요."
+      ]
+    },
+    {
+      "id": "roedeer",
+      "name": "노루",
+      "emoji": "🦌",
+      "region": "snow",
+      "time": "day",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          50,
+          -56
+        ],
+        [
+          70,
+          -44
+        ],
+        [
+          58,
+          -66
+        ]
+      ],
+      "intro": "손님 친구 노루를 만났어요!",
+      "arrive": "노루가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "엉덩이에 하얀 털이 있어요.",
+        "뿔은 수컷만 있고 해마다 새로 자라요.",
+        "놀라면 개처럼 컹컹 짖어요."
+      ]
+    },
+    {
+      "id": "marten",
+      "name": "노란목도리담비",
+      "emoji": "🦡",
+      "region": "snow",
+      "time": "any",
+      "move": "walk",
+      "visitor": true,
+      "spots": [
+        [
+          48,
+          -50
+        ],
+        [
+          66,
+          -60
+        ],
+        [
+          72,
+          -40
+        ]
+      ],
+      "intro": "손님 친구 노란목도리담비를 만났어요!",
+      "arrive": "노란목도리담비가 있어요! 꾹 눌러서 관찰해요.",
+      "facts": [
+        "목에 노란 털이 목도리처럼 나 있어요.",
+        "여러 마리가 함께 사냥해요.",
+        "멸종위기 동물이라 함께 지켜야 해요."
+      ]
+    }
+  ],
+  "quests": [
+    {
+      "id": "find_butterfly",
+      "type": "find",
+      "target": "butterfly",
+      "icon": "🦋",
+      "text": "손님 친구 호랑나비를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_bee",
+      "type": "find",
+      "target": "bee",
+      "icon": "🐝",
+      "text": "손님 친구 꿀벌을 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_mantis",
+      "type": "find",
+      "target": "mantis",
+      "icon": "🦗",
+      "text": "손님 친구 사마귀를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_hedgehog",
+      "type": "find",
+      "target": "hedgehog",
+      "icon": "🦔",
+      "text": "손님 친구 고슴도치를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_woodpecker",
+      "type": "find",
+      "target": "woodpecker",
+      "icon": "🐦",
+      "text": "손님 친구 오색딱따구리를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_firefly",
+      "type": "find",
+      "target": "firefly",
+      "icon": "✨",
+      "text": "손님 친구 반딧불이를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_treefrog",
+      "type": "find",
+      "target": "treefrog",
+      "icon": "🐸",
+      "text": "손님 친구 청개구리를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_otter",
+      "type": "find",
+      "target": "otter",
+      "icon": "🦦",
+      "text": "손님 친구 수달을 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_damselfly",
+      "type": "find",
+      "target": "damselfly",
+      "icon": "🪰",
+      "text": "손님 친구 물잠자리를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_strider",
+      "type": "find",
+      "target": "strider",
+      "icon": "🕷️",
+      "text": "손님 친구 소금쟁이를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_gull",
+      "type": "find",
+      "target": "gull",
+      "icon": "🕊️",
+      "text": "손님 친구 괭이갈매기를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_jellyfish",
+      "type": "find",
+      "target": "jellyfish",
+      "icon": "🪼",
+      "text": "손님 친구 해파리를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_egret",
+      "type": "find",
+      "target": "egret",
+      "icon": "🦢",
+      "text": "손님 친구 백로를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_roedeer",
+      "type": "find",
+      "target": "roedeer",
+      "icon": "🦌",
+      "text": "손님 친구 노루를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "find_marten",
+      "type": "find",
+      "target": "marten",
+      "icon": "🦡",
+      "text": "손님 친구 노란목도리담비를 찾아요",
+      "reward": 8
+    },
+    {
+      "id": "star_forest",
+      "type": "stars",
+      "region": "forest",
+      "count": 5,
+      "icon": "⭐",
+      "text": "숲에서 별 다섯 개를 모아요",
+      "reward": 6
+    },
+    {
+      "id": "star_valley",
+      "type": "stars",
+      "region": "valley",
+      "count": 5,
+      "icon": "⭐",
+      "text": "계곡에서 별 다섯 개를 모아요",
+      "reward": 6
+    },
+    {
+      "id": "star_beach",
+      "type": "stars",
+      "region": "beach",
+      "count": 5,
+      "icon": "⭐",
+      "text": "바닷가에서 별 다섯 개를 모아요",
+      "reward": 6
+    },
+    {
+      "id": "star_cave",
+      "type": "stars",
+      "region": "cave",
+      "count": 5,
+      "icon": "⭐",
+      "text": "동굴에서 별 다섯 개를 모아요",
+      "reward": 6
+    },
+    {
+      "id": "star_flat",
+      "type": "stars",
+      "region": "flat",
+      "count": 5,
+      "icon": "⭐",
+      "text": "갯벌에서 별 다섯 개를 모아요",
+      "reward": 6
+    },
+    {
+      "id": "star_snow",
+      "type": "stars",
+      "region": "snow",
+      "count": 5,
+      "icon": "⭐",
+      "text": "눈 덮인 산에서 별 다섯 개를 모아요",
+      "reward": 6
+    },
+    {
+      "id": "fish_pond",
+      "type": "fish",
+      "place": "pond",
+      "count": 2,
+      "icon": "🎣",
+      "text": "연못에서 물고기 두 마리를 낚아요",
+      "reward": 6
+    },
+    {
+      "id": "fish_stream",
+      "type": "fish",
+      "place": "stream",
+      "count": 2,
+      "icon": "🎣",
+      "text": "계곡에서 물고기 두 마리를 낚아요",
+      "reward": 6
+    },
+    {
+      "id": "fish_sea",
+      "type": "fish",
+      "place": "sea",
+      "count": 2,
+      "icon": "🎣",
+      "text": "바다에서 물고기 두 마리를 낚아요",
+      "reward": 6
+    },
+    {
+      "id": "buddy_forest",
+      "type": "buddy",
+      "region": "forest",
+      "icon": "🐾",
+      "text": "친구를 데리고 숲에 가요",
+      "reward": 5
+    },
+    {
+      "id": "buddy_valley",
+      "type": "buddy",
+      "region": "valley",
+      "icon": "🐾",
+      "text": "친구를 데리고 계곡에 가요",
+      "reward": 5
+    },
+    {
+      "id": "buddy_beach",
+      "type": "buddy",
+      "region": "beach",
+      "icon": "🐾",
+      "text": "친구를 데리고 바닷가에 가요",
+      "reward": 5
+    },
+    {
+      "id": "buddy_cave",
+      "type": "buddy",
+      "region": "cave",
+      "icon": "🐾",
+      "text": "친구를 데리고 동굴에 가요",
+      "reward": 5
+    },
+    {
+      "id": "buddy_flat",
+      "type": "buddy",
+      "region": "flat",
+      "icon": "🐾",
+      "text": "친구를 데리고 갯벌에 가요",
+      "reward": 5
+    },
+    {
+      "id": "buddy_snow",
+      "type": "buddy",
+      "region": "snow",
+      "icon": "🐾",
+      "text": "친구를 데리고 눈 덮인 산에 가요",
+      "reward": 5
+    },
+    {
+      "id": "chest",
+      "type": "chest",
+      "icon": "🎁",
+      "text": "숨은 보물상자를 하나 찾아요",
+      "reward": 6
+    },
+    {
+      "id": "ride",
+      "type": "ride",
+      "count": 60,
+      "icon": "🐕",
+      "text": "골디를 타고 신나게 달려요",
+      "reward": 4
+    },
+    {
+      "id": "jump",
+      "type": "jump",
+      "count": 10,
+      "icon": "🦘",
+      "text": "점프를 열 번 해요",
+      "reward": 3
+    }
+  ],
+  "ranks": [
+    "새싹 탐험가",
+    "풀잎 탐험가",
+    "도토리 탐험가",
+    "나무 탐험가",
+    "숲 탐험가",
+    "계곡 탐험가",
+    "바다 탐험가",
+    "동굴 탐험가",
+    "갯벌 탐험가",
+    "눈꽃 탐험가",
+    "무지개 탐험가",
+    "해님 탐험가",
+    "달님 탐험가",
+    "별빛 탐험가",
+    "전설의 탐험가"
+  ]
 }

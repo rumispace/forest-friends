@@ -30,9 +30,11 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
     <div id="lvl" class="pill"><span id="lvlText">탐험가 Lv.1</span><span id="stars"></span></div>
     <div id="gems" class="pill"></div>
     <div id="wallet" class="pill">⭐ 0</div>
+    <button id="questTrack" class="pill qtrack">📜 탐험 게시판</button>
   </div>
   <div class="right">
     <button id="timeBtn" class="round" hidden>🌙</button>
+    <button id="boardBtn" class="round">📜</button>
     <button id="closetBtn" class="round">👕</button>
     <button id="bookBtn" class="round">📖</button>
   </div>
@@ -97,6 +99,16 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
   </div>
 </div>
 
+<!-- 탐험 게시판 -->
+<div id="board" class="overlay hide">
+  <div class="panel boardPanel">
+    <h2>📜 탐험 게시판</h2>
+    <p class="bsub">하나를 골라 해 봐요. 끝내면 새 의뢰가 또 생겨요!</p>
+    <div id="boardList"></div>
+    <button id="boardClose" class="btn">닫기</button>
+  </div>
+</div>
+
 <!-- 옷장 -->
 <div id="closet" class="overlay hide">
   <div class="panel closetPanel">
@@ -129,6 +141,7 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
       <ol id="cardFacts"></ol>
       <div class="btns">
         <button id="cardSpeak" class="btn ghost">🔊 다시 듣기</button>
+        <button id="cardBuddy" class="btn ghost hide">🐾 데리고 다니기</button>
         <button id="cardClose" class="btn">💚 놓아주기</button>
       </div>
     </div>

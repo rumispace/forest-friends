@@ -274,3 +274,20 @@ body.iosweb #homeTip { display: block; }
   #fishCanvas { height: 170px; } #fishMsg { font-size: 16px; min-height: 20px; margin: 2px 0; } .reelWrap { height: 14px; }
   #fcEmoji { font-size: 40px; } #fcName { font-size: 20px; } #fcSize { font-size: 13px; } #fcFact { font-size: 14px; }
 }
+
+/* 탐험 게시판 */
+.qtrack { font-family: inherit; border: 0; cursor: pointer; font-size: 17px; max-width: 30vw; text-align: left; color: #6b3f12; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.qtrack.on { background: #fff3c4; border: 3px solid #ffb84d; }
+.boardPanel { width: min(92vw, 600px); padding: 18px 20px 20px; text-align: center; }
+.boardPanel h2 { font-size: 32px; margin: 0; color: #6b3f12; }
+.bsub { font-size: 18px; color: #7a6a50; margin: 4px 0 12px; }
+#boardList { display: flex; flex-direction: column; gap: 10px; margin-bottom: 14px; }
+.qitem { display: flex; align-items: center; gap: 12px; background: #fff; border: 4px solid #e9d7b0; border-radius: 20px; padding: 10px 14px; font-family: inherit; text-align: left; color: #3b2a1a; }
+.qitem.on { border-color: #ffb84d; background: #fff8e1; }
+.qi { font-size: 40px; } .qt { flex: 1; font-size: 22px; word-break: keep-all; } .qr { font-size: 18px; color: #b07a00; white-space: nowrap; }
+@media (orientation: landscape) and (max-height: 500px) {
+  .qtrack { font-size: 12px; max-width: 26vw; padding: 3px 8px; }
+  .boardPanel { padding: 8px 12px 10px; } .boardPanel h2 { font-size: 20px; } .bsub { font-size: 13px; margin: 2px 0 6px; }
+  #boardList { gap: 6px; margin-bottom: 8px; } .qitem { padding: 5px 10px; border-width: 3px; } .qi { font-size: 26px; } .qt { font-size: 15px; } .qr { font-size: 13px; }
+}
+@media (max-width: 760px) and (orientation: portrait) { .qtrack { font-size: 13px; max-width: 46vw; } }

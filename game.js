@@ -17,6 +17,10 @@ const SAVE_KEY = 'forest.save.v2';   // 이야기 버전 (v1 은 이야기 없�
 const save = { step: 0, found: {}, flashlight: false, night: false, voice: true, sound: true, done: false, swimTold: false };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
+// 새로운 하루: 별과 보물상자가 다시 생긴다 (옷은 아직 없는 것만 상자에서 나온다)
+const TODAY = new Date().toDateString();
+const NEW_DAY = !!save.day && save.day !== TODAY;
+if (save.day !== TODAY) { save.day = TODAY; save.stars = ''; save.chests = ''; save.toldVisitors = false; }
 
 // ───────── 소리 (효과음은 직접 합성) ─────────
 let ac = null, master = null, voiceOut = null;
@@ -518,7 +522,10 @@ function makeBadger() {
   head.add(blob(0.22, 0.2, 0.24, WHITE, {}, true));
   for (const s of [-1, 1]) { const st = at(blob(0.07, 0.17, 0.2, DARK), 0.11 * s, 0.03, 0.04); head.add(st); head.add(at(eye(0.045), 0.1 * s, 0.05, 0.2)); head.add(at(blob(0.06, 0.06, 0.03, DARK), 0.16 * s, 0.17, -0.04)); }
   head.add(at(blob(0.07, 0.06, 0.12, WHITE), 0, -0.06, 0.2)); head.add(at(ball(0.045, 0x1a1a1a), 0, -0.04, 0.32));
-  for (const [x, z] of [[-0.2, 0.28], [0.2, 0.28], [-0.2, -0.28], [0.2, -0.28]]) { g.add(at(cyl(0.08, 0.08, 0.24, DARK, 6), x, 0.12, z)); for (const c of [-0.04, 0, 0.04]) g.add(at(cone(0.015, 0.08, 0xe8e0d0, 4), x + c, 0.02, z + 0.08)).rotation.x = Math.PI / 2; }
+  for (const [x, z] of [[-0.2, 0.28], [0.2, 0.28], [-0.2, -0.28], [0.2, -0.28]]) {
+    g.add(at(cyl(0.08, 0.08, 0.24, DARK, 6), x, 0.12, z));
+    for (const c of [-0.04, 0, 0.04]) { const cl = at(cone(0.015, 0.08, 0xe8e0d0, 4), x + c, 0.02, z + 0.08); cl.rotation.x = Math.PI / 2; g.add(cl); }
+  }
   g.add(at(blob(0.08, 0.06, 0.12, FUR), 0, 0.42, -0.5));
   return { group: g, head };
 }
@@ -631,6 +638,184 @@ function makeJjiri() {
   bm.position.set(-0.05, -0.3, -0.03); bm.castShadow = true; body.add(bm);
   return { group: g, body, brows, wand: bm, mouth: grin };
 }
+// ───────── 손님 친구 (날마다 다른 곳에 놀러 온다) ─────────
+function wingPair(g, color, w, h, y, z, opacity) {
+  const wings = [];
+  for (const s of [-1, 1]) {
+    const p = new THREE.Group(); p.position.set(0.04 * s, y, z); g.add(p);
+    const wm = new THREE.Mesh(GEO.ico, mat(color, opacity ? { opacity, double: true } : { double: true })); wm.scale.set(w, 0.012, h); wm.position.x = w * s; p.add(wm);
+    wings.push({ p, s });
+  }
+  return wings;
+}
+function makeButterfly() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.04, 0.04, 0.22, 0x1a1a1a), 0, 0, 0));
+  const wings = [];
+  for (const s of [-1, 1]) {
+    const p = new THREE.Group(); p.position.set(0.03 * s, 0.02, 0); g.add(p);
+    const f = blob(0.2, 0.012, 0.16, 0xf6d23a, { double: true }); f.position.set(0.18 * s, 0, 0.08); p.add(f);
+    const b = blob(0.14, 0.012, 0.12, 0xf6d23a, { double: true }); b.position.set(0.13 * s, 0, -0.12); p.add(b);
+    for (const [x, z] of [[0.14, 0.12], [0.24, 0.05], [0.12, -0.12]]) p.add(at(blob(0.05, 0.015, 0.018, 0x1a1a1a), x * s, 0.005, z));
+    wings.push({ p, s });
+  }
+  for (const s of [-1, 1]) { g.add(at(eye(0.03), 0.03 * s, 0.03, 0.12)); const a = cyl(0.006, 0.006, 0.18, 0x1a1a1a, 3); a.position.set(0.04 * s, 0.08, 0.2); a.rotation.x = 0.8; g.add(a); }
+  return { group: g, wings };
+}
+function makeBee() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.12, 0.11, 0.17, 0xf3c23a, {}, true), 0, 0, -0.03));
+  for (const z of [-0.08, 0.02]) g.add(at(blob(0.122, 0.112, 0.03, 0x1a1a1a), 0, 0, z));
+  g.add(at(blob(0.09, 0.08, 0.08, 0x1a1a1a, {}, true), 0, 0.02, 0.15));
+  for (const s of [-1, 1]) g.add(at(eye(0.04), 0.05 * s, 0.05, 0.2));
+  { const _m = at(cone(0.02, 0.06, 0x1a1a1a, 4), 0, -0.01, -0.22); _m.rotation.x = -Math.PI / 2; g.add(_m); }
+  const wings = wingPair(g, 0xe8f6ff, 0.1, 0.07, 0.11, -0.02, 0.6);
+  return { group: g, wings };
+}
+function makeMantis() {
+  const g = new THREE.Group(); const GR = 0x7fbf3a;
+  g.add(at(blob(0.06, 0.06, 0.26, GR), 0, 0.14, -0.12));
+  const thorax = cyl(0.03, 0.035, 0.28, GR, 5); thorax.position.set(0, 0.24, 0.1); thorax.rotation.x = -0.9; g.add(thorax);
+  const head = new THREE.Group(); head.position.set(0, 0.36, 0.2); g.add(head);
+  head.add(blob(0.07, 0.05, 0.05, GR)); for (const s of [-1, 1]) head.add(at(eye(0.035), 0.06 * s, 0.02, 0.02));
+  const arms = [];
+  for (const s of [-1, 1]) { const a = new THREE.Group(); a.position.set(0.04 * s, 0.28, 0.18); g.add(a); a.add(at(blob(0.025, 0.1, 0.025, GR), 0, -0.08, 0.03)); const f = at(blob(0.02, 0.025, 0.08, GR), 0, -0.16, 0.08); a.add(f); arms.push(a); }
+  insectLegs(g, GR, 0.05, [0.02, -0.1], 0.2).forEach(l => l.position.y = 0.14);
+  return { group: g, head, arms };
+}
+function makeHedgehog() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.22, 0.17, 0.26, 0x6e5a48, {}, true), 0, 0.17, -0.02));
+  for (let i = 0; i < 26; i++) { const a = (i / 26) * Math.PI * 2, b = (i % 3) * 0.35 + 0.2; const sp = cone(0.025, 0.12, 0x4a3a2e, 3); sp.position.set(Math.cos(a) * 0.17 * Math.sin(b + 0.6), 0.2 + Math.cos(b + 0.6) * 0.12, Math.sin(a) * 0.2 - 0.04); sp.lookAt(sp.position.clone().multiplyScalar(2).setY(sp.position.y * 2 - 0.1)); sp.rotateX(Math.PI / 2); g.add(sp); }
+  const face = at(blob(0.11, 0.09, 0.12, 0xd9c4a8, {}, true), 0, 0.13, 0.2); g.add(face);
+  g.add(at(ball(0.028, 0x1a1a1a), 0, 0.12, 0.32)); for (const s of [-1, 1]) g.add(at(eye(0.03), 0.05 * s, 0.17, 0.27));
+  return { group: g };
+}
+function makeWoodpecker() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.14, 0.2, 0.14, 0x1c1c1c), 0, 0.22, 0));
+  g.add(at(blob(0.1, 0.15, 0.08, 0xf2f0e8), 0, 0.2, 0.08));
+  for (const s of [-1, 1]) g.add(at(blob(0.03, 0.12, 0.1, 0xf2f0e8), 0.13 * s, 0.24, -0.02));
+  g.add(at(blob(0.06, 0.05, 0.06, 0xd83a3a), 0, 0.05, 0.02));
+  const head = new THREE.Group(); head.position.set(0, 0.44, 0.03); g.add(head);
+  head.add(blob(0.1, 0.09, 0.1, 0x1c1c1c, {}, true)); head.add(at(blob(0.06, 0.04, 0.06, 0xd83a3a), 0, 0.02, -0.07));
+  for (const s of [-1, 1]) { head.add(at(blob(0.03, 0.04, 0.04, 0xffffff), 0.08 * s, -0.01, 0.03)); head.add(at(eye(0.03), 0.06 * s, 0.03, 0.07)); }
+  const bill = cone(0.025, 0.14, 0x3a3a3a, 4); bill.rotation.x = Math.PI / 2; bill.position.set(0, 0, 0.15); head.add(bill);
+  g.add(at(blob(0.04, 0.1, 0.03, 0x1c1c1c), 0, 0.05, -0.1));
+  const wings = wingPair(g, 0x1c1c1c, 0.01, 0.01, 0.3, 0); // 접은 날개 (흔들림만)
+  return { group: g, head, wings };
+}
+function makeFirefly() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.06, 0.05, 0.13, 0x2a2a2a), 0, 0, 0.02));
+  g.add(at(blob(0.05, 0.04, 0.04, 0xe25a3a), 0, 0.02, 0.15));
+  const glow = new THREE.Mesh(GEO.ico2, new THREE.MeshBasicMaterial({ color: 0xeaff7a })); glow.scale.set(0.065, 0.05, 0.07); glow.position.z = -0.12; g.add(glow);
+  for (const s of [-1, 1]) g.add(at(eye(0.025), 0.035 * s, 0.04, 0.18));
+  const wings = wingPair(g, 0xdde8f0, 0.07, 0.06, 0.05, 0, 0.5);
+  return { group: g, wings, glow };
+}
+function makeTreefrog() {
+  const g = new THREE.Group(); const GR = 0x6fd14a;
+  g.add(at(blob(0.16, 0.12, 0.17, GR, {}, true), 0, 0.12, 0));
+  g.add(at(blob(0.12, 0.05, 0.1, 0xeaf6c8), 0, 0.06, 0.06));
+  for (const s of [-1, 1]) {
+    g.add(at(eye(0.05), 0.08 * s, 0.24, 0.07));
+    g.add(at(blob(0.05, 0.04, 0.12, GR), 0.15 * s, 0.05, -0.08));
+    g.add(at(blob(0.03, 0.06, 0.03, GR), 0.1 * s, 0.05, 0.12));
+    g.add(at(ball(0.022, 0xd8f0a0), 0.11 * s, 0.01, 0.16));
+  }
+  const mouth = mesh(new THREE.TorusGeometry(0.06, 0.008, 4, 10, Math.PI), mat(0x2f6b2a)); mouth.rotation.z = Math.PI; mouth.position.set(0, 0.13, 0.16); g.add(mouth);
+  return { group: g };
+}
+function makeOtter() {
+  const g = new THREE.Group(); const FUR = 0x6b4a32;
+  g.add(at(blob(0.2, 0.18, 0.45, FUR, {}, true), 0, 0.2, 0));
+  const head = new THREE.Group(); head.position.set(0, 0.28, 0.42); g.add(head);
+  head.add(blob(0.16, 0.14, 0.15, FUR, {}, true)); head.add(at(blob(0.11, 0.07, 0.08, 0xc9b49a), 0, -0.04, 0.1));
+  head.add(at(ball(0.03, 0x1a1a1a), 0, -0.01, 0.17));
+  for (const s of [-1, 1]) { head.add(at(eye(0.035), 0.07 * s, 0.05, 0.11)); head.add(at(blob(0.03, 0.03, 0.02, FUR), 0.13 * s, 0.07, -0.02)); }
+  const tail = blob(0.07, 0.05, 0.3, FUR); tail.position.set(0, 0.12, -0.5); g.add(tail);
+  for (const [x, z] of [[-0.14, 0.25], [0.14, 0.25], [-0.14, -0.22], [0.14, -0.22]]) g.add(at(blob(0.05, 0.05, 0.07, 0x4a3222), x, 0.04, z));
+  return { group: g, head };
+}
+function makeDamselfly() {
+  const g = new THREE.Group();
+  { const _m = at(cyl(0.015, 0.012, 0.5, 0x2fbf6a, 5, { rough: 0.3 }), 0, 0, -0.15); _m.rotation.x = Math.PI / 2; g.add(_m); }
+  g.add(at(blob(0.04, 0.035, 0.06, 0x2fbf6a, { rough: 0.3 }), 0, 0, 0.12));
+  for (const s of [-1, 1]) g.add(at(eye(0.03), 0.04 * s, 0.02, 0.17));
+  const wings = [];
+  for (const s of [-1, 1]) for (const z of [0.06, -0.02]) { const p = new THREE.Group(); p.position.set(0.02 * s, 0.03, z); g.add(p); const w = blob(0.16, 0.01, 0.035, 0x1a1a1a, { opacity: 0.85, double: true }); w.position.x = 0.16 * s; p.add(w); wings.push({ p, s }); }
+  return { group: g, wings };
+}
+function makeStrider() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.04, 0.03, 0.2, 0x3a3226), 0, 0.06, 0));
+  for (const s of [-1, 1]) g.add(at(eye(0.025), 0.03 * s, 0.08, 0.17));
+  for (const [z, len, ang] of [[0.1, 0.18, 0.7], [0, 0.4, 0.2], [-0.05, 0.38, -0.5]]) for (const s of [-1, 1]) {
+    const l = cyl(0.006, 0.006, len, 0x2a2218, 3); l.rotation.z = Math.PI / 2; l.rotation.y = ang * s; l.position.set(len / 2 * Math.cos(ang) * s, 0.03, z + len / 2 * Math.sin(ang)); g.add(l);
+  }
+  return { group: g };
+}
+function makeGull() {
+  const g = new THREE.Group();
+  g.add(at(blob(0.16, 0.15, 0.3, 0xffffff), 0, 0.25, 0));
+  const head = new THREE.Group(); head.position.set(0, 0.44, 0.2); g.add(head);
+  head.add(blob(0.11, 0.1, 0.11, 0xffffff, {}, true));
+  for (const s of [-1, 1]) head.add(at(eye(0.03), 0.07 * s, 0.03, 0.07));
+  const bill = cone(0.03, 0.13, 0xf3c64a, 4); bill.rotation.x = Math.PI / 2; bill.position.set(0, -0.01, 0.15); head.add(bill);
+  head.add(at(blob(0.032, 0.012, 0.02, 0xe2533f), 0, -0.02, 0.2));
+  const wings = [];
+  for (const s of [-1, 1]) { const p = new THREE.Group(); p.position.set(0.12 * s, 0.32, 0); g.add(p); const w = blob(0.3, 0.025, 0.13, 0x9aa3ad); w.position.x = 0.28 * s; p.add(w); p.add(at(blob(0.08, 0.026, 0.1, 0x1a1a1a), 0.54 * s, 0, -0.02)); wings.push({ p, s }); }
+  for (const s of [-1, 1]) g.add(at(cyl(0.015, 0.015, 0.14, 0xf3c64a, 4), 0.06 * s, 0.07, 0));
+  g.add(at(blob(0.08, 0.03, 0.12, 0x1a1a1a), 0, 0.27, -0.3));
+  return { group: g, head, wings };
+}
+function makeJellyfish() {
+  const g = new THREE.Group();
+  const bell = mesh(new THREE.SphereGeometry(0.28, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xd9b6ff, transparent: true, opacity: 0.7, roughness: 0.2, emissive: 0x7a4ad0, emissiveIntensity: 0.25 }));
+  bell.scale.y = 0.8; g.add(bell);
+  for (const s of [-1, 1]) g.add(at(eye(0.045), 0.09 * s, 0.1, 0.22));
+  const legs = [];
+  for (let i = 0; i < 8; i++) { const a = i / 8 * Math.PI * 2; const t = cyl(0.012, 0.006, 0.45, 0xe8d0ff, 3, { opacity: 0.8 }); t.position.set(Math.cos(a) * 0.17, -0.22, Math.sin(a) * 0.17); g.add(t); legs.push(t); }
+  return { group: g, legs };
+}
+function makeEgret() {
+  const g = new THREE.Group(); const W = 0xffffff;
+  g.add(at(blob(0.2, 0.2, 0.32, W), 0, 0.85, 0));
+  for (const s of [-1, 1]) g.add(at(cyl(0.02, 0.02, 0.65, 0x1a1a1a, 4), 0.07 * s, 0.38, 0));
+  const neck = cyl(0.05, 0.06, 0.5, W, 6); neck.position.set(0, 1.18, 0.18); neck.rotation.x = 0.35; g.add(neck);
+  const head = new THREE.Group(); head.position.set(0, 1.43, 0.27); g.add(head);
+  head.add(blob(0.08, 0.08, 0.1, W, {}, true)); for (const s of [-1, 1]) head.add(at(eye(0.028), 0.05 * s, 0.02, 0.06));
+  const bill = cone(0.025, 0.24, 0xf3c64a, 4); bill.rotation.x = Math.PI / 2; bill.position.set(0, -0.01, 0.2); head.add(bill);
+  return { group: g, head };
+}
+function makeRoedeer() {
+  const g = new THREE.Group(); const FUR = 0x9a6a42;
+  g.add(at(blob(0.24, 0.24, 0.45, FUR), 0, 0.8, 0));
+  g.add(at(blob(0.13, 0.13, 0.06, 0xffffff), 0, 0.84, -0.42)); // 하얀 엉덩이
+  for (const [x, z] of [[-0.13, 0.28], [0.13, 0.28], [-0.13, -0.28], [0.13, -0.28]]) g.add(at(cyl(0.035, 0.03, 0.6, 0x7a5232, 5), x, 0.32, z));
+  const neck = cyl(0.07, 0.09, 0.38, FUR, 6); neck.position.set(0, 1.08, 0.36); neck.rotation.x = 0.5; g.add(neck);
+  const head = new THREE.Group(); head.position.set(0, 1.28, 0.48); g.add(head);
+  head.add(blob(0.11, 0.12, 0.18, FUR, {}, true)); head.add(at(ball(0.03, 0x1a1a1a), 0, -0.04, 0.18));
+  for (const s of [-1, 1]) {
+    head.add(at(eye(0.035), 0.08 * s, 0.03, 0.08));
+    const ear = at(blob(0.04, 0.1, 0.02, FUR), 0.1 * s, 0.13, -0.04); ear.rotation.z = -0.5 * s; head.add(ear);
+    const an = cyl(0.012, 0.018, 0.2, 0x5a3a20, 4); an.position.set(0.04 * s, 0.2, 0); an.rotation.z = -0.2 * s; head.add(an);
+  }
+  return { group: g, head };
+}
+function makeMarten() {
+  const g = new THREE.Group(); const FUR = 0x5a3a24;
+  g.add(at(blob(0.15, 0.14, 0.4, FUR, {}, true), 0, 0.22, 0));
+  g.add(at(blob(0.12, 0.1, 0.1, 0xf3c23a), 0, 0.24, 0.3)); // 노란 목도리
+  const head = new THREE.Group(); head.position.set(0, 0.3, 0.42); g.add(head);
+  head.add(blob(0.12, 0.11, 0.14, 0x2a1a10, {}, true)); head.add(at(ball(0.025, 0x111111), 0, -0.02, 0.14));
+  for (const s of [-1, 1]) { head.add(at(eye(0.035), 0.06 * s, 0.04, 0.1)); head.add(at(blob(0.04, 0.04, 0.02, 0x2a1a10), 0.1 * s, 0.1, -0.02)); }
+  const tail = blob(0.06, 0.06, 0.35, 0x2a1a10); tail.position.set(0, 0.24, -0.6); tail.rotation.x = 0.3; g.add(tail);
+  for (const [x, z] of [[-0.1, 0.2], [0.1, 0.2], [-0.1, -0.2], [0.1, -0.2]]) g.add(at(cyl(0.035, 0.03, 0.18, 0x2a1a10, 4), x, 0.09, z));
+  return { group: g, head };
+}
+
 const MAKERS = { goldie: makeGoldie, squirrel: makeSquirrel, cicada: makeCicada, ladybug: makeLadybug, rhino: makeRhino, stag: makeStag,
   minnow: makeMinnow, crayfish: makeCrayfish, kingfisher: makeKingfisher, crab: makeCrab, hermit: makeHermit, starfish: makeStarfish,
   bat: makeBat, salamander: makeSalamander, badger: makeBadger, mudskipper: makeMudskipper, fiddler: makeFiddler, spoonbill: makeSpoonbill, hare: makeHare, goral: makeGoral, owl: makeOwl };
@@ -1400,7 +1585,7 @@ function makeItem(kind, i) {
   } else { // 쓰레기: 페트병·캔·비닐
     const t = i % 3;
     if (t === 0) { const b = cyl(0.1, 0.1, 0.42, 0x9fd8f0, 8, { opacity: 0.8 }); b.rotation.z = Math.PI / 2; b.position.y = 0.12; g.add(b); const cap = cyl(0.05, 0.05, 0.08, 0x2f6fe0, 6); cap.rotation.z = Math.PI / 2; cap.position.set(0.25, 0.12, 0); g.add(cap); }
-    else if (t === 1) { const c = cyl(0.1, 0.1, 0.24, 0xe2533f, 8); c.rotation.x = Math.PI / 2; c.position.y = 0.1; g.add(c); g.add(at(cyl(0.101, 0.101, 0.06, 0xd8d8d8, 8), 0, 0.1, 0)).rotation.x = Math.PI / 2; }
+    else if (t === 1) { const c = cyl(0.1, 0.1, 0.24, 0xe2533f, 8); c.rotation.x = Math.PI / 2; c.position.y = 0.1; g.add(c); { const _m = at(cyl(0.101, 0.101, 0.06, 0xd8d8d8, 8), 0, 0.1, 0); _m.rotation.x = Math.PI / 2; g.add(_m); } }
     else { g.add(at(blob(0.25, 0.14, 0.2, 0xf4f4f4, { opacity: 0.85 }), 0, 0.12, 0)); g.add(at(blob(0.06, 0.12, 0.04, 0xf4f4f4), 0.12, 0.28, 0)); }
   }
   return g;
@@ -1457,7 +1642,7 @@ function foundCount() { return ALL_IDS.filter(id => save.found[id]).length; }
 function gemDone(ch) { const bi = MISSIONS.findIndex(m => m.ch === ch.id && m.type === 'boss'); return step > bi; }
 function refreshHud() {
   const n = foundCount();
-  $('#lvlText').textContent = `탐험가 Lv.${1 + n}`;
+  const lv = lvlOf(save.xp || 0); $('#lvlText').textContent = `${(STORY.ranks || ['탐험가'])[Math.min((STORY.ranks || [1]).length - 1, Math.floor((lv - 1) / 2))]} Lv.${lv}`;
   $('#stars').textContent = `🌟 ${n} / ${ALL_IDS.length}`;
   const part = step > P1END ? 2 : 1;
   $('#gems').innerHTML = CHAPTERS.filter(c => c.part === part).map(c => `<span class="${gemDone(c) ? 'on' : ''}">${c.gemIcon}</span>`).join('');
@@ -1533,6 +1718,8 @@ function openCard(id, isNew, creature) {
   $('#cardName').textContent = def.companion ? `${def.nick} (${def.name})` : def.name;
   $('#cardFacts').innerHTML = def.facts.map(f => `<li>${f}</li>`).join('');
   $('#cardClose').textContent = isNew && !def.companion ? '💚 놓아주기' : (def.companion && isNew ? '🐾 같이 가자!' : '닫기');
+  const bb = $('#cardBuddy'); bb.classList.toggle('hide', isNew || def.companion || !save.found[id]);
+  bb.textContent = save.buddy === id ? '🏠 돌려보내기' : '🐾 데리고 다니기'; bb.onclick = () => { sfx.pop(); setBuddy(id); bb.textContent = save.buddy === id ? '🏠 돌려보내기' : '🐾 데리고 다니기'; };
   $('#card').classList.remove('hide');
   setCardModel(id); sizeCard();
   readCard(def);
@@ -1566,6 +1753,14 @@ function openBook() {
       if (found) el.onclick = () => { $('#book').classList.add('hide'); cardBookId = f.id; openCard(f.id, false, null); };
       grid.appendChild(el);
     }
+  }
+  const vh = document.createElement('div'); vh.className = 'bookHead'; vh.textContent = '🌟 손님 친구 (날마다 다른 곳에 놀러 와요)'; grid.appendChild(vh);
+  for (const f of VISITORS) {
+    const found = !!save.found[f.id], here = visitorCs.find(c => c.vis.id === f.id)?.vis.active;
+    const el = document.createElement('div'); el.className = 'slot ' + (found ? 'found' : 'locked');
+    el.innerHTML = `<div class="ic">${f.emoji}</div><div>${found ? f.name : '???'}</div><div class="tag">${here ? '✨ 오늘 ' + REGIONS[f.region].name + '에 왔어요' : REGIONS[f.region].icon + ' ' + REGIONS[f.region].name}${f.time === 'night' ? ' 🌙' : ''}</div>`;
+    if (found) el.onclick = () => { $('#book').classList.add('hide'); cardBookId = f.id; openCard(f.id, false, null); };
+    grid.appendChild(el);
   }
   const fh = document.createElement('div'); fh.className = 'bookHead'; fh.textContent = '🎣 낚시 기록'; grid.appendChild(fh);
   for (const kind of ['pond', 'stream', 'sea']) for (const f of FISH[kind]) {
@@ -1700,6 +1895,7 @@ function completeMission(quiet) {
   const m = cur(); if (!m) return;
   step++; save.step = step; save.done = step >= MISSIONS.length; persist();
   refreshHud(); paintMission();
+  if (!quiet) { addXP(5); buddyCheer(); }
   if (!quiet) { sfx.chime(); cheer = 1; addStars(3, boy.group.position.clone().setY(boy.group.position.y + 1.6)); }
   const next = () => {
     if (m.reward === 'flashlight') { save.flashlight = true; persist(); showItem('🔦', MSG.flashTitle, MSG.flashText, () => startMission()); return; }
@@ -1914,7 +2110,7 @@ const HOLD_SEC = 1.3, JOY_R = 70;
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
 tapMark.rotation.x = -Math.PI / 2; tapMark.renderOrder = 3; scene.add(tapMark);
 
-function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide') || !$('#fish').classList.contains('hide'); }
+function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide') || !$('#fish').classList.contains('hide') || !$('#board').classList.contains('hide'); }
 function setNdc(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); }
 function pickCreature() {
   const hits = ray.intersectObjects(creatures.filter(c => c.appear > 0.5).map(c => c.hit), false);
@@ -1926,7 +2122,7 @@ function pickCloud() {
 }
 function flatDist(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 function nearCreature(c) { return flatDist(boy.group.position, c.stand) < 1.3 || flatDist(boy.group.position, c.anchor) < flatDist(c.stand, c.anchor) + 0.6; }
-function isTarget(c) { const m = cur(); return !m || (m.type === 'meet' && m.target === c.id); }
+function isTarget(c) { if (c.vis) return true; const m = cur(); return !m || (m.type === 'meet' && m.target === c.id); }
 
 const cvEl = renderer.domElement;
 cvEl.addEventListener('pointerdown', e => {
@@ -1989,6 +2185,7 @@ function faceTo(p) { faceAngle = Math.atan2(p.x - boy.group.position.x, p.z - bo
 
 function discover(c) {
   save.found[c.id] = true; persist();
+  addXP(10); if (c.vis) questEvent('find', c.id); buddyCheer();
   setTimeout(() => addStars(5, c.holder.getWorldPosition(new V3())), 300);
   sfx.chime(); cheer = 1;
   spawnHearts(c.holder.getWorldPosition(new V3()));
@@ -2152,6 +2349,7 @@ function drawMini(t) {
   mctx.font = `${Math.round(miniSize * 0.12)}px sans-serif`;
   for (const g of Object.values(gates)) if (!g.open) { const [x, y] = M(g.pos.x, g.pos.z); mctx.fillText('🔒', x, y); }
   for (const a of Object.values(actors)) if (a.state !== 'off') { const [x, y] = M(a.pos.x, a.pos.z); mctx.fillText(a.icon, x, y); }
+  for (const c of visitorCs) if (c.vis.active && c.appear > 0.5) { const [x, y] = M(c.anchor.x, c.anchor.z); mctx.fillText(save.found[c.vis.id] ? c.vis.emoji : '❔', x, y); }
   for (const sp of FISH_SPOTS) { const [x, y] = M(sp.x, sp.z); mctx.fillText('🎣', x, y); }
   for (const c of chests) if (!c.opened) { const [x, y] = M(c.x, c.z); mctx.fillText('🎁', x, y); }
   mctx.font = `${Math.round(miniSize * 0.1)}px sans-serif`;
@@ -2237,7 +2435,7 @@ function updateStars(dt, t) {
     if (playing && Math.abs(bp.x - s.x) < 1.0 && Math.abs(bp.z - s.z) < 1.0) {
       if (s.y > low && s.y < high) {
         const a = save.stars.split(''); a[i] = '1'; save.stars = a.join(''); s.k = 1;
-        sfxStar(); addStars(1, new V3(s.x, s.y, s.z));
+        sfxStar(); addStars(1, new V3(s.x, s.y, s.z)); addXP(1); questEvent('stars', regionAt(s.x, s.z));
       } else if (!save.toldFloat && !blocked()) { save.toldFloat = true; persist(); say(MSG.starFloat, true, 3000); }
     }
   }
@@ -2291,7 +2489,7 @@ function updateChests(dt, t) {
       const a = save.chests.split(''); a[i] = '1'; save.chests = a.join('');
       sfx.chime(); cheer = 1;
       spawnSparks(c.g.position.clone().setY(c.g.position.y + 0.8), [0xff6b6b, 0xffd23f, 0x5cd65c, 0x4da6ff, 0xc08cff], 26);
-      addStars(10);
+      addStars(10); addXP(5); questEvent('chest');
       const left = CLOSET.filter(it => !save.owned[it.id]);
       if (left.length) {
         const it = left[Math.floor(Math.random() * left.length)]; save.owned[it.id] = true; persist();
@@ -2377,7 +2575,7 @@ function setRide(on) {
 }
 function doJump() {
   if (!playing || blocked() || jumpY > 0.02) return;
-  jumpV = riding ? 7.2 : 6.6; tone(420, 0.18, 'sine', 0.13, 0, 900);
+  jumpV = riding ? 7.2 : 6.6; questEvent('jump'); tone(420, 0.18, 'sine', 0.13, 0, 900);
 }
 $('#rideBtn').addEventListener('pointerdown', e => { e.preventDefault(); if (!playing || blocked()) return; setRide(!riding); });
 $('#jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
@@ -2545,7 +2743,7 @@ function landFish() {
   $('#fcRelease').textContent = isJunk ? '🗑️ 버리기' : '💚 놓아주기';
   $('#fishCatch').classList.remove('hide');
   speak(isNew ? [MSG.fishNew, c.got, c.fact] : [c.got, c.fact]);
-  addStars(isNew ? 5 : isJunk ? 1 : 2);
+  addStars(isNew ? 5 : isJunk ? 1 : 2); if (!isJunk) { addXP(3); questEvent('fish', f.spot.kind); }
   fishMsg(c.got);
 }
 $('#fcRelease').addEventListener('click', e => {
@@ -2624,6 +2822,184 @@ function drawFishing(t) {
     c.restore();
     if (f.state === 'bite') { c.fillStyle = 'rgba(255,255,255,.9)'; for (let i = 0; i < 6; i++) { const a = t * 6 + i; c.beginPath(); c.arc(bx + Math.cos(a) * 16, by - 6 - Math.abs(Math.sin(a * 1.3)) * 14, 3, 0, 7); c.fill(); } }
   }
+}
+
+// ───────── 끝없는 탐험: 손님 친구 · 친구 데리고 다니기 · 탐험 게시판 · 탐험가 등급 ─────────
+const VISITORS = STORY.visitors || [];
+const VMAKE = { butterfly: makeButterfly, bee: makeBee, mantis: makeMantis, hedgehog: makeHedgehog, woodpecker: makeWoodpecker, firefly: makeFirefly, treefrog: makeTreefrog,
+  otter: makeOtter, damselfly: makeDamselfly, strider: makeStrider, gull: makeGull, jellyfish: makeJellyfish, egret: makeEgret, roedeer: makeRoedeer, marten: makeMarten };
+Object.assign(MAKERS, VMAKE);
+for (const v of VISITORS) DEF[v.id] = v;
+const VSCALE = { butterfly: 1.4, bee: 1.6, mantis: 1.5, hedgehog: 1.3, woodpecker: 1.3, firefly: 2, treefrog: 1.5, otter: 1.1, damselfly: 1.4, strider: 2, gull: 1, jellyfish: 1.3, egret: 1, roedeer: 0.85, marten: 1.1 };
+function regionOpen(r) { return r === 'forest' || !!gates[r]?.open; }
+const visitorCs = VISITORS.map(v => {
+  const holder = new THREE.Group();
+  const c = addCreature(v.id, holder, new V3(), new V3(), VSCALE[v.id] || 1, (c, dt, t) => {
+    const m = c.made, k = c.vis.move;
+    if (m.wings) m.wings.forEach(({ p, s }, i) => p.rotation.z = Math.sin(t * (v.id === 'butterfly' ? 9 : 26) + i) * 0.7 * s);
+    if (k === 'fly') { m.group.position.set(Math.cos(t * 0.6 + c.ph) * 0.8, Math.sin(t * 1.7 + c.ph) * 0.2, Math.sin(t * 0.6 + c.ph) * 0.6); m.group.rotation.y = -t * 0.6 - c.ph; }
+    else if (k === 'water') { m.group.position.set(Math.cos(t * 0.4 + c.ph) * 0.6, Math.sin(t * 1.3) * 0.04, Math.sin(t * 0.4 + c.ph) * 0.6); m.group.rotation.y = -t * 0.4 - c.ph; if (m.legs) m.legs.forEach((l, i) => l.rotation.x = Math.sin(t * 2 + i) * 0.2); }
+    else { m.group.position.x = Math.sin(t * 0.35 + c.ph) * 0.5; m.group.rotation.y = Math.cos(t * 0.35 + c.ph) > 0 ? Math.PI / 2 - 0.3 : -Math.PI / 2 + 0.3; }
+    if (m.head) m.head.rotation.y = Math.sin(t * 0.8 + c.ph) * 0.4;
+    if (m.glow) m.glow.material.color.setScalar(0.75 + 0.25 * Math.sin(t * 1.5 + c.ph)); // 느린 숨쉬기
+  });
+  c.vis = v; c.ph = Math.random() * 6; c.appear = 0; holder.visible = false;
+  if (v.move === 'fly') c.hit.scale.setScalar(1.3);
+  return c;
+});
+function visTimeOK(v) { return v.time === 'night' ? nightK > 0.5 : v.time === 'day' ? nightK < 0.5 : true; }
+function placeVisitor(c) {
+  const v = c.vis, [x, z] = v.spots[Math.floor(Math.random() * v.spots.length)];
+  const water = v.move === 'water';
+  const y = water ? (v.id === 'jellyfish' ? -0.3 : -0.06) : Math.max(0, groundH(x, z)) + (v.move === 'fly' ? 1.5 : 0);
+  c.holder.position.set(x, y, z); c.anchor.set(x, 0, z);
+  // 관찰하러 서는 자리: 남쪽(화면 쪽) 걸을 수 있는 곳
+  let st = new V3(x, 0, z + 2.8);
+  for (let d = 2.8; d < 7 && (!walkable(st.x, st.z) || isWater(st.x, st.z) && !water); d += 0.8) st.set(x, 0, z + d);
+  if (v.id === 'jellyfish') st.set(x - 2.6, 0, z);
+  c.stand.copy(st);
+  c.vis.active = true;
+}
+let visitorRollAt = 0;
+function rollVisitors() {
+  visitorCs.forEach(c => { c.vis.active = false; });
+  const open = visitorCs.filter(c => regionOpen(c.vis.region));
+  const unfound = open.filter(c => !save.found[c.vis.id]).sort(() => Math.random() - 0.5);
+  const found = open.filter(c => save.found[c.vis.id]).sort(() => Math.random() - 0.5);
+  [...unfound.slice(0, 4), ...found.slice(0, 2), ...unfound.slice(4, 5)].slice(0, 6).forEach(placeVisitor);
+  visitorRollAt = clock.elapsedTime;
+}
+
+// 친구 데리고 다니기
+const FLY_BUDDY = new Set(['bat', 'kingfisher', 'owl', 'cicada', 'ladybug', 'butterfly', 'bee', 'firefly', 'damselfly', 'woodpecker', 'gull']);
+const BUBBLE_BUDDY = new Set(['minnow', 'jellyfish', 'strider']);
+let buddy = null;
+function makeBuddy(id) {
+  if (buddy) { scene.remove(buddy.root); buddy = null; }
+  if (!id) return;
+  const made = MAKERS[id]();
+  if (id === 'bat' && made.body) made.body.rotation.z = 0; // 데리고 다닐 땐 바로 서서 난다
+  const root = new THREE.Group(); root.add(made.group);
+  const box = new THREE.Box3().setFromObject(made.group), size = box.getSize(new V3());
+  const fly = FLY_BUDDY.has(id), bubble = BUBBLE_BUDDY.has(id);
+  made.group.scale.multiplyScalar((fly || bubble ? 0.5 : 0.7) / Math.max(size.x, size.y, size.z));
+  box.setFromObject(made.group); made.group.position.y -= box.min.y;
+  if (bubble) { const b = new THREE.Mesh(GEO.ball, new THREE.MeshStandardMaterial({ color: 0xbfe8ff, transparent: true, opacity: 0.35, roughness: 0.1, depthWrite: false })); b.scale.setScalar(0.42); b.position.y = 0.2; b.renderOrder = 4; root.add(b); }
+  const bp = boy.group.position; root.position.set(bp.x - 1, bp.y, bp.z + 1);
+  scene.add(root);
+  buddy = { id, root, made, fly, bubble, hop: 0, ph: 0 };
+}
+function setBuddy(id) {
+  save.buddy = save.buddy === id ? null : id; persist();
+  makeBuddy(save.buddy);
+  if (save.buddy) { sfx.chime(); spawnHearts(buddy.root.position.clone().setY(buddy.root.position.y + 0.8)); say(MSG.buddyOn, true, 2500); }
+  else say(MSG.buddyOff, true, 2500);
+}
+function updateBuddy(dt, t, moving) {
+  if (!buddy) return;
+  const bp = boy.group.position, r = buddy.root.position;
+  const fwd = new V3(Math.sin(boy.group.rotation.y), 0, Math.cos(boy.group.rotation.y)), side = new V3(fwd.z, 0, -fwd.x);
+  const goal = bp.clone().addScaledVector(fwd, -1.1).addScaledVector(side, -0.9);
+  const d = new V3(goal.x - r.x, 0, goal.z - r.z), dist = d.length();
+  let walk = false;
+  if (dist > 0.25) { const sp = Math.min(dist, (2 + dist * 2.4) * dt); d.normalize(); r.x += d.x * sp; r.z += d.z * sp; buddy.root.rotation.y += (Math.atan2(d.x, d.z) - buddy.root.rotation.y) * 0; turnToward(buddy.root, Math.atan2(d.x, d.z), dt, 6); walk = true; }
+  if (dist > 12) r.set(goal.x, r.y, goal.z);
+  buddy.ph += dt * (walk ? 10 : 2);
+  const water = isWater(r.x, r.z), gy = water ? -0.25 : Math.max(-0.2, groundH(r.x, r.z));
+  let y = gy;
+  if (buddy.fly) y = Math.max(gy, 0) + 1.5 + Math.sin(t * 2.2) * 0.15;
+  else if (buddy.bubble) y = Math.max(gy, 0) + 0.45 + Math.sin(t * 1.8) * 0.12;
+  else y = gy + (walk ? Math.abs(Math.sin(buddy.ph)) * 0.12 : 0);
+  if (buddy.hop > 0) { buddy.hop = Math.max(0, buddy.hop - dt * 1.6); y += Math.sin(buddy.hop * Math.PI) * 0.6; }
+  r.y += (y - r.y) * Math.min(1, dt * 8);
+  const m = buddy.made;
+  if (m.wings) m.wings.forEach(({ p, s }, i) => p.rotation.z = Math.sin(t * 20 + i) * 0.6 * s);
+  if (m.tail && m.tail.rotation) m.tail.rotation.y = Math.sin(t * 5) * 0.3;
+  if (m.legs) m.legs.forEach((l, i) => { if (l.rotation) l.rotation.x = walk ? Math.sin(buddy.ph + i) * 0.4 : 0; });
+}
+function buddyCheer() { if (buddy) buddy.hop = 1; }
+
+// 탐험가 등급 (경험치는 끝없이 쌓인다)
+save.xp = save.xp || 0;
+const RANKS = STORY.ranks || ['탐험가'];
+const lvlOf = xp => 1 + Math.floor(Math.sqrt(xp / 8));
+const rankOf = lvl => Math.min(RANKS.length - 1, Math.floor((lvl - 1) / 2));
+function addXP(n) {
+  const before = lvlOf(save.xp); save.xp += n; persist();
+  const after = lvlOf(save.xp);
+  if (after > before) {
+    refreshHud();
+    const r0 = rankOf(before), r1 = rankOf(after);
+    setTimeout(() => { sfx.item(); spawnSparks(boy.group.position.clone().setY(boy.group.position.y + 1.8), [0xffd23f, 0xff8fb1, 0x7dd3fc], 18); say(r1 > r0 ? MSG['rank_' + r1] : MSG.rankUp, true, 3000); }, 1200);
+  }
+}
+
+// 탐험 게시판: 의뢰 3개, 하나를 끝내면 새 의뢰가 생긴다 (끝없이)
+const QUESTS = STORY.quests || [];
+save.board = save.board || { offers: [], active: null, prog: 0, done: {} };
+function questOK(q) {
+  if (q.type === 'find') { const c = visitorCs.find(c => c.vis.id === q.target); return c && c.vis.active && !save.found[q.target] && visTimeOK(c.vis); }
+  if (q.type === 'stars') return regionOpen(q.region) && starSpots.some((s, i) => !starGot(i) && regionAt(s.x, s.z) === q.region);
+  if (q.type === 'fish') return q.place === 'pond' || (q.place === 'stream' ? regionOpen('valley') : regionOpen('beach'));
+  if (q.type === 'buddy') return regionOpen(q.region) && Object.keys(save.found).some(k => k !== 'goldie');
+  if (q.type === 'chest') return chests.some(c => !c.opened && regionOpen(regionAt(c.x, c.z)));
+  return true;
+}
+function refillBoard() {
+  const b = save.board;
+  b.offers = b.offers.filter(id => { const q = QUESTS.find(x => x.id === id); return q && questOK(q); });
+  const pool = QUESTS.filter(q => !b.offers.includes(q.id) && questOK(q)).sort((a, z) => (b.done[a.id] || 0) - (b.done[z.id] || 0) + (Math.random() - 0.5) * 2);
+  while (b.offers.length < 3 && pool.length) b.offers.push(pool.shift().id);
+  if (b.active && !b.offers.includes(b.active)) { b.active = null; b.prog = 0; }
+  persist(); paintQuest();
+}
+const curQuest = () => QUESTS.find(q => q.id === save.board.active) || null;
+function paintQuest() {
+  const q = curQuest(), el = $('#questTrack');
+  if (!q) { el.textContent = '📜 탐험 게시판'; el.classList.remove('on'); return; }
+  const need = q.count || 1, shown = q.type === 'ride' ? Math.floor(save.board.prog) : save.board.prog;
+  el.textContent = `${q.icon} ${q.text} (${Math.min(shown, need)}/${need})`; el.classList.add('on');
+}
+function openBoard() {
+  sfx.pop(); hush(); refillBoard();
+  const list = $('#boardList'); list.innerHTML = '';
+  for (const id of save.board.offers) {
+    const q = QUESTS.find(x => x.id === id);
+    const el = document.createElement('button');
+    el.className = 'qitem' + (save.board.active === id ? ' on' : '');
+    el.innerHTML = `<div class="qi">${q.icon}</div><div class="qt">${q.text}</div><div class="qr">⭐ ${q.reward}</div>`;
+    el.onclick = () => { sfx.tap(); save.board.active = id; save.board.prog = 0; persist(); paintQuest(); speak([MSG.questPick, q.text]); openBoard(); };
+    list.appendChild(el);
+  }
+  $('#board').classList.remove('hide');
+}
+function questEvent(type, data, amount = 1) {
+  const q = curQuest(); if (!q || q.type !== type) return;
+  if (type === 'find' && data !== q.target) return;
+  if ((type === 'stars' || type === 'buddy') && data !== q.region) return;
+  if (type === 'fish' && data !== q.place) return;
+  save.board.prog += amount;
+  if (save.board.prog >= (q.count || 1)) questDone(q); else { persist(); paintQuest(); }
+}
+function questDone(q) {
+  const b = save.board; b.done[q.id] = (b.done[q.id] || 0) + 1; b.active = null; b.prog = 0;
+  b.offers = b.offers.filter(id => id !== q.id);
+  sfx.chime(); cheer = 1; buddyCheer();
+  addStars(q.reward, boy.group.position.clone().setY(boy.group.position.y + 1.6)); addXP(q.reward * 2);
+  say([MSG.questDone, MSG.questNew], true, 4000);
+  refillBoard();
+}
+$('#boardBtn').onclick = () => { if (playing && !blocked()) openBoard(); };
+$('#questTrack').onclick = () => { if (playing && !blocked()) openBoard(); };
+$('#boardClose').onclick = () => { sfx.pop(); $('#board').classList.add('hide'); };
+
+function updateEndless(dt, t, moving) {
+  if (playing && clock.elapsedTime - visitorRollAt > 720) { rollVisitors(); refillBoard(); } // 12분마다 손님이 바뀐다
+  updateBuddy(dt, t, moving);
+  if (!playing) return;
+  const q = curQuest();
+  if (q && q.type === 'ride' && riding && moving) { save.board.prog += dt; if (save.board.prog >= q.count) questDone(q); else if (Math.floor(save.board.prog) !== Math.floor(save.board.prog - dt)) paintQuest(); }
+  if (q && q.type === 'buddy' && buddy && region === q.region) questEvent('buddy', region);
 }
 
 // ───────── 날씨: 2부엔 먹구름·비, 눈 덮인 산엔 눈 (깜빡임 없이 천천히) ─────────
@@ -2865,10 +3241,10 @@ function frame() {
   // 친구들
   const tgt = cur() && cur().type === 'meet' ? byId(cur().target) : null;
   for (const c of creatures) {
-    const want = c.def.time === 'night' ? nightK : 1;
+    const want = c.vis ? (c.vis.active && visTimeOK(c.vis) ? 1 : 0) : c.def.time === 'night' ? nightK : 1;
     c.appear += (want - c.appear) * Math.min(1, dt * 2);
     c.holder.visible = c.appear > 0.02;
-    if (c.def.time === 'night') c.holder.scale.setScalar(Math.max(0.001, c.appear));
+    if (c.def.time === 'night' || c.vis) c.holder.scale.setScalar(Math.max(0.001, c.appear));
     if (c.hop > 0) { c.hop = Math.max(0, c.hop - dt); c.made.group.position.y = Math.sin(c.hop * Math.PI * 3) ** 2 * 0.15; }
     c.update(c, dt, t);
     const show = !save.found[c.id] && isTarget(c) && c.appear > 0.6 && playing;
@@ -2892,7 +3268,8 @@ function frame() {
   // 미니게임·악당
   updateItems(dt, t); updateClouds(dt, t); updateSumo(dt, t);
   updateStars(dt, t); updateChests(dt, t); updateSparks(dt); updateMusic(); updateFishing(dt, t);
-  $('#actBtns').classList.toggle('hide', !playing || blocked()); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
+  $('#actBtns').classList.toggle('hide', !playing || blocked());
+  updateEndless(dt, t, moving); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
   if (smogiHurt > 0) smogiHurt = Math.max(0, smogiHurt - dt * 0.6);
   const bossWho = cur() && cur().type === 'boss' ? (cur().villain || 'smogi') : null;
   for (const [who, v] of Object.entries(actors)) {
@@ -2991,6 +3368,9 @@ $('#startBtn').onclick = () => {
   initAudio(); sfx.pop(); preloadVoices();
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } // iOS 음성 잠금 풀기
   $('#title').classList.add('hide'); playing = true; $('#actBtns').classList.remove('hide'); paintWallet();
+  rollVisitors(); refillBoard(); makeBuddy(save.buddy); refreshHud();
+  const tellVisitors = () => { if (talkOpen || blocked()) { setTimeout(tellVisitors, 3000); return; } save.toldVisitors = true; persist(); say(NEW_DAY ? [MSG.newDay, MSG.visitorsHere] : MSG.visitorsHere, true, 5000); };
+  if (save.found.goldie && (NEW_DAY || !save.toldVisitors)) setTimeout(tellVisitors, 9000);
   if (!save.found.goldie) {
     goldie.group.position.set(-6, 0, 2);
     setTimeout(() => { sfx.bark(); say(MSG.dogComing, true, 2200); }, 400);
@@ -3016,4 +3396,4 @@ $('#setReset').onclick = () => { if (confirm('도감과 진행을 모두 지우�
 $('#setClose').onclick = () => $('#settings').classList.add('hide');
 
 // 시험용 (부모 확인)
-window.__game = { openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };
+window.__game = { visitorCs, rollVisitors, setBuddy, get buddy() { return buddy; }, questEvent, openBoard,  openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };

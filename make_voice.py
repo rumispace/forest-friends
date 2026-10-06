@@ -44,6 +44,10 @@ def lines(story):
             for ln in m.get(key, []):
                 who = ln["who"]
                 add(ln["text"], who if who in ("narr", "smogi", "boss", "jjiri") else "friend")
+    for f in story.get("visitors", []):
+        add(f["intro"]); add(f["arrive"])
+        for x in f["facts"]: add(x)
+    for q in story.get("quests", []): add(q["text"])
     for lst in story.get("fish", {}).values():
         for f in (lst if isinstance(lst, list) else [lst]):
             add(f["got"]); add(f["fact"])

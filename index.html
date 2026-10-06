@@ -20,9 +20,11 @@
     <canvas id="mini"></canvas>
     <div id="lvl" class="pill"><span id="lvlText">탐험가 Lv.1</span><span id="stars"></span></div>
     <div id="gems" class="pill"></div>
+    <div id="wallet" class="pill">⭐ 0</div>
   </div>
   <div class="right">
     <button id="timeBtn" class="round" hidden>🌙</button>
+    <button id="closetBtn" class="round">👕</button>
     <button id="bookBtn" class="round">📖</button>
   </div>
   <button id="gear" title="부모용: 1초 꾹">⚙️</button>
@@ -64,6 +66,22 @@
       <button class="sb" style="--c:#ff6b6b">🍄</button><button class="sb" style="--c:#ffd23f">🌙</button>
       <button class="sb" style="--c:#4da6ff">💧</button><button class="sb" style="--c:#5cd65c">⭐</button>
     </div>
+  </div>
+</div>
+
+<!-- 점프 · 골디 타기 -->
+<div id="actBtns" class="hide">
+  <button id="rideBtn" class="act">🐕<small>타기</small></button>
+  <button id="jumpBtn" class="act">🦘<small>점프</small></button>
+</div>
+
+<!-- 옷장 -->
+<div id="closet" class="overlay hide">
+  <div class="panel closetPanel">
+    <h2>👕 옷장 <span id="closetWallet" class="cw">⭐ 0</span></h2>
+    <div class="tabs"><button class="tab on" data-who="boy">🧒 나</button><button class="tab" data-who="goldie">🐕 골디</button></div>
+    <div id="closetGrid"></div>
+    <button id="closetClose" class="btn">닫기</button>
   </div>
 </div>
 
@@ -120,6 +138,7 @@
     <h2>⚙️ 부모용 설정</h2>
     <div class="setRow"><button id="setVoice" class="btn ghost"></button></div>
     <div class="setRow"><button id="setSound" class="btn ghost"></button></div>
+    <div class="setRow"><button id="setMusic" class="btn ghost"></button></div>
     <div class="setRow"><button id="setReset" class="btn danger">처음부터 다시</button></div>
     <button id="setClose" class="btn">닫기</button>
   </div>

@@ -88,9 +88,9 @@ async function playVoice(f, my) {
   try { buf = await new Promise((res, rej) => ac.decodeAudioData(bytes.slice(0), res, rej)); } catch (e) { return false; }
   if (my !== vToken) return true;
   const src = ac.createBufferSource(); src.buffer = buf; src.connect(voiceOut);
-  vSrc = src; src.start();
+  vSrc = src; musicDuck(true); src.start();
   await new Promise(r => { src.onended = r; setTimeout(r, buf.duration * 1000 + 400); });
-  if (vSrc === src) vSrc = null;
+  if (vSrc === src) { vSrc = null; musicDuck(false); }
   return true;
 }
 let koVoice = null;
@@ -129,7 +129,7 @@ async function speak(parts, onEach, onEnd) {
 }
 function hush() {
   vToken++;
-  if (vSrc) { try { vSrc.stop(); } catch (e) {} vSrc = null; }
+  if (vSrc) { try { vSrc.stop(); } catch (e) {} vSrc = null; musicDuck(false); }
   if (window.speechSynthesis) speechSynthesis.cancel();
 }
 
@@ -845,10 +845,12 @@ const ITEM_SPOTS = {
   clam: [[-20, 50], [-8, 51.5], [4, 63], [20, 50], [-19, 70]],
   track: [[48, -41], [51, -44], [55, -46], [59, -48.5], [62, -50.5], [64.5, -52]],
 };
+// 숨은 보물상자 자리 (언덕 꼭대기, 지역 구석구석)
+const CHEST_SPOTS = [[17, -17], [21, 18], [-26, -11], [-28, -45], [27, -44], [73, -19], [72, 19], [-76, 14], [-64, 14.5], [23, 72], [72, -66], [48, -64]];
 const keepOut = [[SPOT.start, 7], [new V3(0, 0, 14), 5], [SPOT.bigOak, 4.5], [SPOT.cicadaTree, 3.5], [SPOT.log, 3.5], [SPOT.bush, 3], [SPOT.pond, 5.5], [SPOT.ball, 3], [new V3(0, 0, 0), 3],
   [SPOT.minnow, 5], [SPOT.crayRock, 4], [SPOT.kfTree, 4], [SPOT.crab, 5], [SPOT.hermit, 4], [SPOT.pool, 5],
   [SPOT.oakBoss, 5], [SPOT.fallBoss, 5], [SPOT.kingBoss, 7], [SPOT.mudMound, 5], [SPOT.fiddler, 4], [SPOT.spoonPuddle, 5], [SPOT.flatBoss, 6],
-  [SPOT.hare, 4], [SPOT.goralRock, 5], [SPOT.owlTree, 4], [SPOT.snowBoss, 6], ...Object.values(ITEM_SPOTS).flat().map(([x, z]) => [new V3(x, 0, z), 1.6])];
+  [SPOT.hare, 4], [SPOT.goralRock, 5], [SPOT.owlTree, 4], [SPOT.snowBoss, 6], ...CHEST_SPOTS.map(([x, z]) => [new V3(x, 0, z), 2]), ...Object.values(ITEM_SPOTS).flat().map(([x, z]) => [new V3(x, 0, z), 1.6])];
 function freeAt(x, z, r) {
   for (const [p, k] of keepOut) if (Math.hypot(x - p.x, z - p.z) < k + r) return false;
   for (const c of colliders) if (Math.hypot(x - c.x, z - c.z) < c.r + r + 0.6) return false;
@@ -1690,7 +1692,7 @@ function completeMission(quiet) {
   const m = cur(); if (!m) return;
   step++; save.step = step; save.done = step >= MISSIONS.length; persist();
   refreshHud(); paintMission();
-  if (!quiet) { sfx.chime(); cheer = 1; }
+  if (!quiet) { sfx.chime(); cheer = 1; addStars(3, boy.group.position.clone().setY(boy.group.position.y + 1.6)); }
   const next = () => {
     if (m.reward === 'flashlight') { save.flashlight = true; persist(); showItem('🔦', MSG.flashTitle, MSG.flashText, () => startMission()); return; }
     if (m.type === 'boss') { chapterDone(m); return; }
@@ -1904,7 +1906,7 @@ const HOLD_SEC = 1.3, JOY_R = 70;
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
 tapMark.rotation.x = -Math.PI / 2; tapMark.renderOrder = 3; scene.add(tapMark);
 
-function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide'); }
+function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide'); }
 function setNdc(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); }
 function pickCreature() {
   const hits = ray.intersectObjects(creatures.filter(c => c.appear > 0.5).map(c => c.hit), false);
@@ -1927,7 +1929,7 @@ cvEl.addEventListener('pointerdown', e => {
   const c = pickCreature();
   const dog = !c && ray.intersectObject(goldieHit, false).length > 0;
   ptr = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), c, dog };
-  if (c && !save.found[c.id] && isTarget(c) && nearCreature(c)) { hold = { c, t: 0 }; moveQueue = []; faceTo(c.anchor); }
+  if (c && !save.found[c.id] && isTarget(c) && nearCreature(c)) { if (riding) dismount(); hold = { c, t: 0 }; moveQueue = []; faceTo(c.anchor); }
 });
 cvEl.addEventListener('pointermove', e => {
   if (!ptr || e.pointerId !== ptr.id || hold || blocked()) return;
@@ -1979,6 +1981,7 @@ function faceTo(p) { faceAngle = Math.atan2(p.x - boy.group.position.x, p.z - bo
 
 function discover(c) {
   save.found[c.id] = true; persist();
+  setTimeout(() => addStars(5, c.holder.getWorldPosition(new V3())), 300);
   sfx.chime(); cheer = 1;
   spawnHearts(c.holder.getWorldPosition(new V3()));
   setTimeout(() => openCard(c.id, true, c), 700);
@@ -2032,7 +2035,7 @@ function updateFetch(dt) {
   const bp = boy.group.position, gp = goldie.group.position;
   if (fetchState.step === 'find') {
     ballMesh.position.y = 0.25 + Math.abs(Math.sin(clock.elapsedTime * 2)) * 0.15;
-    if (flatDist(bp, ballMesh.position) < 1.5) { fetchState.step = 'carry'; sfx.pop(); say(MSG.ballFound, true, 5000); }
+    if (flatDist(bp, ballMesh.position) < 1.5) { if (riding) dismount(); fetchState.step = 'carry'; sfx.pop(); say(MSG.ballFound, true, 5000); }
   } else if (fetchState.step === 'carry') {
     const f = new V3(Math.sin(boy.group.rotation.y), 0, Math.cos(boy.group.rotation.y));
     ballMesh.position.copy(bp).addScaledVector(f, 0.45).setY(0.75 + bp.y);
@@ -2165,6 +2168,299 @@ function drawMini(t) {
   mctx.restore();
 }
 
+// ───────── 놀거리: 반짝 별 · 보물상자 · 옷장 · 골디 타기 · 점프 · 배경음악 ─────────
+const seeded = seed => () => { seed |= 0; seed = seed + 0x6D2B79F5 | 0; let t = Math.imul(seed ^ seed >>> 15, 1 | seed); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+// 반지 별: 지역마다 뿌려 둔다. 30% 는 공중에 떠 있어서 점프(또는 골디 타기)로 잡는다
+const starRand = seeded(777), SR = (a, b) => a + starRand() * (b - a);
+const starSpots = [];
+function addStarsIn(test, x0, x1, z0, z1, n, water = false) {
+  for (let tries = 0; n > 0 && tries < n * 80; tries++) {
+    const x = SR(x0, x1), z = SR(z0, z1);
+    if (!test(x, z)) continue;
+    if (colliders.some(c => Math.hypot(x - c.x, z - c.z) < c.r + 0.9)) continue;
+    if (starSpots.some(s => Math.hypot(s.x - x, s.z - z) < 3.2)) continue;
+    const fl = !water && starRand() < 0.3;
+    const base = water ? -0.15 : groundH(x, z);
+    starSpots.push({ x, z, y: base + (fl ? 1.95 : 0.65), k: 0 }); n--;
+  }
+}
+addStarsIn((x, z) => Math.hypot(x, z) < 29 && !isWater(x, z), -29, 29, -29, 29, 32);
+addStarsIn((x, z) => inRect(VALLEY, x, z, -0.6), VALLEY.x0, VALLEY.x1, VALLEY.z0, VALLEY.z1, 12);
+addStarsIn((x, z) => isWater(x, z), -27, 27, -63, -57.6, 6, true);
+addStarsIn((x, z) => inRect(BEACH, x, z, -0.6), BEACH.x0, BEACH.x1, BEACH.z0, BEACH.z1, 14);
+addStarsIn((x, z) => isWater(x, z), 77, 86, -18, 18, 5, true);
+addStarsIn((x, z) => inRect(CAVE, x, z, -0.8), CAVE.x0, CAVE.x1, CAVE.z0, CAVE.z1, 14);
+addStarsIn((x, z) => inRect(FLAT, x, z, -0.6), FLAT.x0, FLAT.x1, FLAT.z0, FLAT.z1, 14);
+addStarsIn((x, z) => inRect(SNOW, x, z, -0.8), SNOW.x0, SNOW.x1, SNOW.z0, SNOW.z1, 14);
+const starGeo = (() => {
+  const sh = new THREE.Shape();
+  for (let i = 0; i < 10; i++) { const a = Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 0.13 : 0.3; i ? sh.lineTo(Math.cos(a) * r, Math.sin(a) * r) : sh.moveTo(Math.cos(a) * r, Math.sin(a) * r); }
+  sh.closePath();
+  const g = new THREE.ExtrudeGeometry(sh, { depth: 0.07, bevelEnabled: true, bevelSize: 0.03, bevelThickness: 0.03, bevelSegments: 1 }); g.center(); return g;
+})();
+const starIM = new THREE.InstancedMesh(starGeo, new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xffb800, emissiveIntensity: 0.6, roughness: 0.4, flatShading: true }), starSpots.length);
+starIM.frustumCulled = false; scene.add(starIM);
+save.stars = (save.stars || '').padEnd(starSpots.length, '0');
+save.wallet = save.wallet || 0;
+const starGot = i => save.stars[i] === '1';
+const dummy = new THREE.Object3D();
+function paintWallet(bump) {
+  $('#wallet').textContent = `⭐ ${save.wallet}`; $('#closetWallet').textContent = `⭐ ${save.wallet}`;
+  if (bump) { const w = $('#wallet'); w.classList.remove('bump'); w.offsetHeight; w.classList.add('bump'); }
+}
+function addStars(n, at) {
+  save.wallet += n; persist(); paintWallet(true);
+  if (at) spawnSparks(at, [0xffd23f, 0xffe680, 0xffffff], 6 + n * 2);
+}
+function sfxStar() { const n = [784, 880, 1047, 1175, 1319][Math.floor(Math.random() * 5)]; tone(n, 0.18, 'sine', 0.14); tone(n * 1.5, 0.22, 'sine', 0.08, 0.07); }
+function updateStars(dt, t) {
+  const bp = boy.group.position, low = bp.y - 0.3, high = bp.y + (riding ? 1.9 : 1.45); // 걸으면 공중 별은 점프해야 닿는다
+  for (let i = 0; i < starSpots.length; i++) {
+    const s = starSpots[i];
+    if (starGot(i)) {
+      if (s.k > 0) { s.k = Math.max(0, s.k - dt * 3); dummy.position.set(s.x, s.y + (1 - s.k) * 1.2, s.z); dummy.rotation.set(0, t * 8, 0); dummy.scale.setScalar(Math.max(0.001, s.k)); }
+      else { dummy.position.set(0, -50, 0); dummy.scale.setScalar(0.001); }
+      dummy.updateMatrix(); starIM.setMatrixAt(i, dummy.matrix); continue;
+    }
+    dummy.position.set(s.x, s.y + Math.sin(t * 2 + i) * 0.08, s.z); dummy.rotation.set(0, t * 1.5 + i, 0); dummy.scale.setScalar(1);
+    dummy.updateMatrix(); starIM.setMatrixAt(i, dummy.matrix);
+    if (playing && Math.abs(bp.x - s.x) < 1.0 && Math.abs(bp.z - s.z) < 1.0) {
+      if (s.y > low && s.y < high) {
+        const a = save.stars.split(''); a[i] = '1'; save.stars = a.join(''); s.k = 1;
+        sfxStar(); addStars(1, new V3(s.x, s.y, s.z));
+      } else if (!save.toldFloat && !blocked()) { save.toldFloat = true; persist(); say(MSG.starFloat, true, 3000); }
+    }
+  }
+  starIM.instanceMatrix.needsUpdate = true;
+}
+// 반짝 가루 (별·상자)
+const sparks = [];
+const sparkGeo = new THREE.OctahedronGeometry(0.08, 0);
+function spawnSparks(p, colors, n = 10) {
+  for (let i = 0; i < n; i++) {
+    const m = new THREE.Mesh(sparkGeo, new THREE.MeshBasicMaterial({ color: colors[i % colors.length], transparent: true }));
+    m.position.copy(p); scene.add(m);
+    sparks.push({ m, v: new V3(R(-2, 2), R(2, 4.5), R(-2, 2)), life: 1 });
+  }
+}
+function updateSparks(dt) {
+  for (let i = sparks.length - 1; i >= 0; i--) {
+    const s = sparks[i]; s.life -= dt * 1.2; s.v.y -= 9 * dt; s.m.position.addScaledVector(s.v, dt); s.m.rotation.y += dt * 6;
+    s.m.material.opacity = Math.max(0, s.life);
+    if (s.life <= 0) { scene.remove(s.m); s.m.material.dispose(); sparks.splice(i, 1); }
+  }
+}
+
+// 보물상자: 다가가면 열린다 → 별 10개 + 아직 없는 옷 하나
+function makeChest() {
+  const g = new THREE.Group();
+  const box = mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), mat(0x9a5b2a)); box.position.y = 0.25; g.add(box);
+  for (const x of [-0.3, 0.3]) g.add(at(mesh(new THREE.BoxGeometry(0.08, 0.52, 0.62), mat(0xf3c64a, { rough: 0.3 })), x, 0.25, 0));
+  const lid = new THREE.Group(); lid.position.set(0, 0.5, -0.3); g.add(lid);
+  const top = mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 10, 1, false, 0, Math.PI), mat(0xa8652f)); top.rotation.z = Math.PI / 2; top.rotation.y = Math.PI / 2; top.position.z = 0.3; lid.add(top);
+  for (const x of [-0.3, 0.3]) { const b = mesh(new THREE.CylinderGeometry(0.31, 0.31, 0.08, 10, 1, false, 0, Math.PI), mat(0xf3c64a, { rough: 0.3 })); b.rotation.z = Math.PI / 2; b.rotation.y = Math.PI / 2; b.position.set(x, 0, 0.3); lid.add(b); }
+  g.add(at(mesh(new THREE.BoxGeometry(0.14, 0.16, 0.05), mat(0xf3c64a, { rough: 0.3 })), 0, 0.45, 0.31));
+  g.userData.lid = lid;
+  return g;
+}
+save.chests = (save.chests || '').padEnd(CHEST_SPOTS.length, '0');
+const chests = CHEST_SPOTS.map(([x, z], i) => {
+  const g = makeChest(); g.position.set(x, groundH(x, z), z); g.rotation.y = Math.atan2(-x, -z) * 0 + (i % 3 - 1) * 0.4; scene.add(g);
+  const opened = save.chests[i] === '1';
+  if (opened) g.userData.lid.rotation.x = -1.9;
+  const glint = new THREE.Mesh(new THREE.OctahedronGeometry(0.14, 0), starMat); glint.position.set(x, groundH(x, z) + 1.25, z); glint.visible = !opened; scene.add(glint);
+  return { g, x, z, opened, open: opened ? 1 : 0, glint };
+});
+function updateChests(dt, t) {
+  const bp = boy.group.position;
+  chests.forEach((c, i) => {
+    if (c.opened) { if (c.open < 1) { c.open = Math.min(1, c.open + dt * 2); c.g.userData.lid.rotation.x = -1.9 * c.open; } return; }
+    c.glint.position.y = groundH(c.x, c.z) + 1.2 + Math.sin(t * 2 + i) * 0.1; c.glint.rotation.y = t * 1.5;
+    if (playing && !blocked() && flatDist(bp, c.g.position) < 1.4) {
+      c.opened = true; c.glint.visible = false;
+      const a = save.chests.split(''); a[i] = '1'; save.chests = a.join('');
+      sfx.chime(); cheer = 1;
+      spawnSparks(c.g.position.clone().setY(c.g.position.y + 0.8), [0xff6b6b, 0xffd23f, 0x5cd65c, 0x4da6ff, 0xc08cff], 26);
+      addStars(10);
+      const left = CLOSET.filter(it => !save.owned[it.id]);
+      if (left.length) {
+        const it = left[Math.floor(Math.random() * left.length)]; save.owned[it.id] = true; persist();
+        setTimeout(() => showItem('🎁', MSG.chestTitle, `별 10개와 「${it.name}」 ${it.icon} 을(를) 얻었어요! 옷장에서 입어 봐요.`, null, [MSG.chestTitle, MSG.chestText]), 700);
+      } else setTimeout(() => say(MSG.chestStars, true, 2500), 500);
+    }
+  });
+}
+
+// 옷장: 아이 모자 · 골디 꾸미기
+const CLOSET = [
+  { id: 'straw', who: 'boy', name: '밀짚모자', icon: '👒', price: 10 },
+  { id: 'party', who: 'boy', name: '고깔모자', icon: '🥳', price: 15 },
+  { id: 'bunny', who: 'boy', name: '토끼 귀', icon: '🐰', price: 20 },
+  { id: 'explorer', who: 'boy', name: '탐험가 모자', icon: '🧭', price: 25 },
+  { id: 'pirate', who: 'boy', name: '해적 모자', icon: '🏴‍☠️', price: 30 },
+  { id: 'crown', who: 'boy', name: '왕관', icon: '👑', price: 40 },
+  { id: 'beetle', who: 'boy', name: '장수풍뎅이 모자', icon: '🪲', price: 50 },
+  { id: 'scarf', who: 'goldie', name: '빨간 스카프', icon: '🧣', price: 10 },
+  { id: 'bow', who: 'goldie', name: '리본', icon: '🎀', price: 15 },
+  { id: 'flowers', who: 'goldie', name: '꽃 왕관', icon: '🌼', price: 20 },
+  { id: 'glasses', who: 'goldie', name: '선글라스', icon: '🕶️', price: 25 },
+  { id: 'cape', who: 'goldie', name: '영웅 망토', icon: '🦸', price: 35 },
+];
+save.owned = save.owned || {}; save.wear = save.wear || { boy: null, goldie: null };
+const hatSlot = new THREE.Group(); hatSlot.position.set(0, 0.3, 0); boy.head.add(hatSlot);
+const dogHeadSlot = new THREE.Group(); dogHeadSlot.position.set(0, 0.2, 0); goldie.head.add(dogHeadSlot);
+const dogBodySlot = new THREE.Group(); goldie.group.add(dogBodySlot);
+const WEAR = {
+  straw: () => { const g = new THREE.Group(); g.add(at(cyl(0.62, 0.62, 0.04, 0xe8c66a, 14), 0, 0.02, 0)); g.add(at(cyl(0.3, 0.34, 0.24, 0xe8c66a, 12), 0, 0.14, 0)); g.add(at(cyl(0.345, 0.345, 0.06, 0xe2533f, 12), 0, 0.06, 0)); return g; },
+  party: () => { const g = new THREE.Group(); const c = cone(0.22, 0.6, 0xff8fb1, 10); c.position.y = 0.28; g.add(c); for (const y of [0.12, 0.3]) g.add(at(cyl(0.2 - y * 0.35, 0.21 - y * 0.35, 0.05, 0xffd23f, 10), 0, y, 0)); g.add(at(blob(0.08, 0.08, 0.08, 0xffffff), 0, 0.6, 0)); return g; },
+  bunny: () => { const g = new THREE.Group(); for (const s of [-1, 1]) { const e = new THREE.Group(); e.position.set(0.14 * s, 0, 0); e.rotation.z = -0.15 * s; e.add(at(blob(0.09, 0.32, 0.05, 0xffffff), 0, 0.3, 0)); e.add(at(blob(0.05, 0.24, 0.02, 0xffb6c8), 0, 0.3, 0.04)); g.add(e); } return g; },
+  explorer: () => { const g = new THREE.Group(); g.add(at(cyl(0.58, 0.58, 0.04, 0xc9b27a, 14), 0, 0.02, 0)); g.add(at(blob(0.42, 0.3, 0.42, 0xd9c48a, {}, true), 0, 0.05, 0)); g.add(at(cyl(0.43, 0.43, 0.06, 0x6b4a2a, 14), 0, 0.06, 0)); return g; },
+  pirate: () => { const g = new THREE.Group(); const h = blob(0.6, 0.18, 0.36, 0x1f1f24); h.position.y = 0.12; g.add(h); g.add(at(blob(0.4, 0.22, 0.3, 0x1f1f24, {}, true), 0, 0.2, 0)); g.add(at(blob(0.07, 0.07, 0.02, 0xffffff), 0, 0.22, 0.33)); return g; },
+  crown: () => { const g = new THREE.Group(); g.add(at(cyl(0.34, 0.34, 0.16, 0xf3c64a, 12, { rough: 0.25 }), 0, 0.08, 0)); for (let i = 0; i < 6; i++) { const a = i / 6 * Math.PI * 2; g.add(at(cone(0.07, 0.18, 0xf3c64a, 5, { rough: 0.25 }), Math.cos(a) * 0.3, 0.24, Math.sin(a) * 0.3)); } for (const [a, c] of [[0, 0xe2533f], [2.1, 0x4da6ff], [4.2, 0x5cd65c]]) g.add(at(blob(0.05, 0.05, 0.03, c, { emissive: c, ei: 0.3 }), Math.sin(a) * 0.345, 0.09, Math.cos(a) * 0.345)); return g; },
+  beetle: () => { const g = new THREE.Group(); g.add(at(blob(0.48, 0.3, 0.48, 0x55301b, { rough: 0.3 }, true), 0, 0.02, 0)); const h1 = cyl(0.05, 0.09, 0.42, 0x55301b, 6, { rough: 0.3 }); h1.position.set(0, 0.32, 0.22); h1.rotation.x = 0.5; g.add(h1); for (const s of [-1, 1]) { const tip = cone(0.04, 0.16, 0x55301b, 5, { rough: 0.3 }); tip.position.set(0.05 * s, 0.56, 0.34); tip.rotation.z = -0.5 * s; g.add(tip); } for (const s of [-1, 1]) g.add(at(eye(0.06), 0.2 * s, 0.14, 0.4)); return g; },
+  scarf: () => { const g = new THREE.Group(); const r = mesh(new THREE.TorusGeometry(0.22, 0.07, 6, 14), mat(0xe2533f)); r.position.set(0, 0.92, 0.42); r.rotation.x = 1.3; g.add(r); const tl = blob(0.07, 0.2, 0.04, 0xe2533f); tl.position.set(0.12, 0.78, 0.6); tl.rotation.z = 0.3; g.add(tl); return g; },
+  bow: () => { const g = new THREE.Group(); for (const s of [-1, 1]) { const b = blob(0.12, 0.08, 0.05, 0xff6fa8); b.position.set(0.11 * s, 0.06, 0); b.rotation.z = 0.4 * s; g.add(b); } g.add(at(blob(0.05, 0.05, 0.05, 0xff3d8a), 0, 0.06, 0)); return g; },
+  flowers: () => { const g = new THREE.Group(); for (let i = 0; i < 7; i++) { const a = i / 7 * Math.PI * 2; const c = [0xffd23f, 0xff8fb1, 0xffffff][i % 3]; g.add(at(blob(0.07, 0.04, 0.07, c), Math.cos(a) * 0.22, 0.02, Math.sin(a) * 0.22)); g.add(at(blob(0.03, 0.03, 0.03, 0xff9f43), Math.cos(a) * 0.22, 0.05, Math.sin(a) * 0.22)); } return g; },
+  glasses: () => { const g = new THREE.Group(); for (const s of [-1, 1]) { const l = mesh(new THREE.CylinderGeometry(0.08, 0.08, 0.03, 12), mat(0x111111, { rough: 0.2 })); l.rotation.x = Math.PI / 2; l.position.set(0.12 * s, -0.13, 0.25); g.add(l); } g.add(at(blob(0.06, 0.012, 0.012, 0x111111), 0, -0.12, 0.27)); return g; },
+  cape: () => { const g = new THREE.Group(); const c = blob(0.38, 0.05, 0.5, 0xd63c3c); c.position.set(0, 0.98, -0.05); c.rotation.x = -0.1; g.add(c); g.add(at(blob(0.06, 0.06, 0.06, 0xffd23f), 0, 0.98, 0.42)); return g; },
+};
+function applyWear() {
+  for (const slot of [hatSlot, dogHeadSlot, dogBodySlot]) while (slot.children.length) slot.remove(slot.children[0]);
+  const b = save.wear.boy, d = save.wear.goldie;
+  if (b && WEAR[b]) hatSlot.add(WEAR[b]());
+  if (d && WEAR[d]) (d === 'scarf' || d === 'cape' ? dogBodySlot : dogHeadSlot).add(WEAR[d]());
+}
+applyWear();
+let closetWho = 'boy';
+function paintCloset() {
+  paintWallet();
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.who === closetWho));
+  const grid = $('#closetGrid'); grid.innerHTML = '';
+  for (const it of CLOSET.filter(i => i.who === closetWho)) {
+    const owned = !!save.owned[it.id], worn = save.wear[it.who] === it.id;
+    const el = document.createElement('button');
+    el.className = 'citem' + (owned ? ' owned' : '') + (worn ? ' worn' : '') + (!owned && save.wallet < it.price ? ' poor' : '');
+    el.innerHTML = `<div class="ic">${it.icon}</div><div>${it.name}</div><div class="pr">${worn ? '입었어요 ✓' : owned ? '입기' : '⭐ ' + it.price}</div>`;
+    el.onclick = () => {
+      if (owned) { save.wear[it.who] = worn ? null : it.id; persist(); applyWear(); sfx.pop(); if (!worn) speak(MSG.wear); paintCloset(); return; }
+      if (save.wallet < it.price) { sfx.tap(); speak(MSG.needStars); return; }
+      save.wallet -= it.price; save.owned[it.id] = true; save.wear[it.who] = it.id; persist(); applyWear();
+      sfx.chime(); speak(MSG.bought); paintCloset();
+    };
+    grid.appendChild(el);
+  }
+}
+$('#closetBtn').onclick = () => { if (!playing) return; sfx.pop(); hush(); closetWho = 'boy'; paintCloset(); $('#closet').classList.remove('hide'); };
+document.querySelectorAll('.tab').forEach(t => t.onclick = () => { sfx.tap(); closetWho = t.dataset.who; paintCloset(); });
+$('#closetClose').onclick = () => { sfx.pop(); $('#closet').classList.add('hide'); };
+
+// 골디 타기 · 점프
+let riding = false, jumpY = 0, jumpV = 0;
+function canRide() { const m = cur(); return !(m && m.type === 'fetch' && fetchState.step !== 'find' && fetchState.step !== 'done'); }
+function dismount() { riding = false; $('#rideBtn').classList.remove('on'); boy.legs.forEach(l => l.rotation.z = 0); }
+function setRide(on) {
+  if (on && !canRide()) { say(MSG.rideNo, true, 2000); return; }
+  riding = on; $('#rideBtn').classList.toggle('on', on);
+  if (on) { goldie.group.position.x = boy.group.position.x; goldie.group.position.z = boy.group.position.z; sfx.bark(); }
+  boy.legs.forEach((l, i) => l.rotation.z = on ? (i ? -0.9 : 0.9) : 0);
+  say(on ? MSG.rideOn : MSG.rideOff, true, 2200);
+}
+function doJump() {
+  if (!playing || blocked() || jumpY > 0.02) return;
+  jumpV = riding ? 7.2 : 6.6; tone(420, 0.18, 'sine', 0.13, 0, 900);
+}
+$('#rideBtn').addEventListener('pointerdown', e => { e.preventDefault(); if (!playing || blocked()) return; setRide(!riding); });
+$('#jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
+addEventListener('keydown', e => { if (e.code === 'Space' && !talkSkip && !e.repeat) { e.preventDefault(); doJump(); } if (e.code === 'KeyR' && playing && !blocked()) setRide(!riding); });
+
+// 발소리 (지역마다 다르게, 아주 작게)
+function stepSound(r) {
+  if (!ac || !save.sound) return;
+  if (r === 'snow') tone(260 + Math.random() * 60, 0.06, 'square', 0.018);
+  else if (r === 'beach' || r === 'flat') tone(160 + Math.random() * 40, 0.05, 'triangle', 0.03);
+  else if (r === 'cave') tone(300 + Math.random() * 80, 0.05, 'sine', 0.03);
+  else tone(200 + Math.random() * 50, 0.04, 'triangle', 0.025);
+}
+
+// 배경음악: 지역마다 다른 곡을 그 자리에서 만들어(합성) 되풀이한다. 저작권 걱정 없음
+const MUSIC_CFG = {
+  forest: { bpm: 100, root: 60, mode: 'maj', inst: 'pluck', drums: 1, seed: 11 },
+  night: { bpm: 74, root: 60, mode: 'maj', inst: 'harp', drums: 0, seed: 12 },
+  valley: { bpm: 88, root: 65, mode: 'maj', inst: 'harp', drums: 0, seed: 13 },
+  beach: { bpm: 112, root: 67, mode: 'maj', inst: 'marimba', drums: 1, seed: 14 },
+  cave: { bpm: 70, root: 57, mode: 'min', inst: 'bell', drums: 0, seed: 15 },
+  flat: { bpm: 104, root: 62, mode: 'maj', inst: 'marimba', drums: 1, seed: 16 },
+  snow: { bpm: 82, root: 64, mode: 'maj', inst: 'bell', drums: 0, seed: 17 },
+  boss: { bpm: 128, root: 57, mode: 'min', inst: 'pluck', drums: 2, seed: 18 },
+};
+function renderMusic(cfg) {
+  const sr = 22050, spb = 60 / cfg.bpm, bars = 8, dur = bars * 4 * spb;
+  const OAC = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+  const oc = new OAC(1, Math.ceil(sr * dur), sr);
+  const out = oc.createGain(); out.gain.value = 0.9; out.connect(oc.destination);
+  const r = seeded(cfg.seed);
+  const f = n => 440 * Math.pow(2, (n - 69) / 12);
+  const note = (t, n, d, type, vol, atk = 0.01) => {
+    const o = oc.createOscillator(), g = oc.createGain(); o.type = type; o.frequency.value = f(n);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + atk); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+    o.connect(g); g.connect(out); o.start(t); o.stop(t + d + 0.05);
+  };
+  const INST = {
+    pluck: (t, n) => { note(t, n, 0.35, 'triangle', 0.16); note(t, n + 12, 0.15, 'sine', 0.04); },
+    harp: (t, n) => { note(t, n, 0.9, 'sine', 0.15); note(t, n, 0.5, 'triangle', 0.05); },
+    marimba: (t, n) => { note(t, n, 0.28, 'sine', 0.2); note(t, n + 24, 0.06, 'sine', 0.05); },
+    bell: (t, n) => { note(t, n, 1.3, 'sine', 0.12); note(t, n + 19, 0.6, 'sine', 0.035); },
+  };
+  const prog = cfg.mode === 'maj' ? [0, 7, 9, 5] : [0, 8, 3, 10];
+  const scale = cfg.mode === 'maj' ? [0, 2, 4, 7, 9] : [0, 3, 5, 7, 10];
+  const pitches = []; for (let o = 0; o < 2; o++) for (const s of scale) pitches.push(cfg.root + o * 12 + s);
+  // 4마디 가락을 만들어 두 번 (끝은 으뜸음으로)
+  const phrase = []; let idx = 4;
+  for (let i = 0; i < 32; i++) { if (r() < (cfg.inst === 'bell' || cfg.inst === 'harp' ? 0.45 : 0.32)) { phrase.push(null); continue; } idx = Math.max(0, Math.min(pitches.length - 1, idx + Math.floor(r() * 5) - 2)); phrase.push(pitches[idx]); }
+  phrase[31] = null; phrase[28] = pitches[5];
+  let noise = null;
+  if (cfg.drums) { noise = oc.createBuffer(1, sr * 0.1, sr); const d = noise.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length); }
+  for (let bar = 0; bar < bars; bar++) {
+    const t0 = bar * 4 * spb, root = cfg.root - 12 + prog[bar % 4];
+    note(t0, root - 12, spb * 1.8, 'triangle', 0.22); note(t0 + 2 * spb, root - 12 + (bar % 2 ? 7 : 0), spb * 1.8, 'triangle', 0.18);
+    for (const iv of [0, cfg.mode === 'maj' && ![9].includes(prog[bar % 4]) ? 4 : 3, 7]) note(t0, root + iv, spb * 4, 'sine', 0.035, 0.4);
+    for (let k = 0; k < 8; k++) { const n = phrase[(bar % 4) * 8 + k]; if (n != null) INST[cfg.inst](t0 + k * spb / 2, n); }
+    if (cfg.drums) for (let b = 0; b < 4; b++) {
+      const tb = t0 + b * spb;
+      if (b % 2 === 0) { const o = oc.createOscillator(), g = oc.createGain(); o.frequency.setValueAtTime(130, tb); o.frequency.exponentialRampToValueAtTime(45, tb + 0.12); g.gain.setValueAtTime(0.28, tb); g.gain.exponentialRampToValueAtTime(0.0001, tb + 0.15); o.connect(g); g.connect(out); o.start(tb); o.stop(tb + 0.2); }
+      const hs = oc.createBufferSource(), hf = oc.createBiquadFilter(), hg = oc.createGain(); hs.buffer = noise; hf.type = 'highpass'; hf.frequency.value = 6000; hg.gain.value = cfg.drums === 2 ? 0.07 : 0.04;
+      hs.connect(hf); hf.connect(hg); hg.connect(out); hs.start(tb + spb / 2);
+    }
+  }
+  return oc.startRendering();
+}
+let musicBus = null, musicNow = null, musicKey = null;
+const musicBufs = {};
+function musicDuck(on) { if (musicBus) musicBus.gain.setTargetAtTime(on ? 0.07 : 0.2, ac.currentTime, 0.15); }
+function wantMusic() {
+  if (save.music === false) return null;
+  const m = cur(); if (m && m.type === 'boss' && bossReady) return 'boss';
+  if (region === 'forest' && nightK > 0.5) return 'night';
+  return MUSIC_CFG[region] ? region : 'forest';
+}
+function updateMusic() {
+  if (!ac || !playing) return;
+  const key = wantMusic();
+  if (key === musicKey) return;
+  musicKey = key;
+  if (!musicBus) { musicBus = ac.createGain(); musicBus.gain.value = 0.2; musicBus.connect(ac.destination); }
+  if (musicNow) { const o = musicNow; o.g.gain.setTargetAtTime(0.0001, ac.currentTime, 0.5); setTimeout(() => { try { o.src.stop(); } catch (e) {} }, 3000); musicNow = null; }
+  if (!key) return;
+  if (!musicBufs[key]) musicBufs[key] = renderMusic(MUSIC_CFG[key]).catch(() => null);
+  musicBufs[key].then(buf => {
+    if (!buf || musicKey !== key) return;
+    const g = ac.createGain(); g.gain.value = 0.0001; g.connect(musicBus);
+    const src = ac.createBufferSource(); src.buffer = buf; src.loop = true; src.connect(g); src.start();
+    g.gain.setTargetAtTime(1, ac.currentTime, 0.6);
+    musicNow = { src, g };
+  });
+}
+
 // ───────── 날씨: 2부엔 먹구름·비, 눈 덮인 산엔 눈 (깜빡임 없이 천천히) ─────────
 const STORM_FROM = MISSIONS.findIndex(m => m.storm);
 const rain = (() => {
@@ -2250,7 +2546,7 @@ document.querySelectorAll('.sb').forEach((b, i) => b.addEventListener('pointerdo
 
 // ───────── 메인 루프 ─────────
 const UP = new V3(0, 1, 0);
-let camY = 0, detour = 0, detourSide = 1, stuck = 0, region = 'forest', swimPh = 0, rippleCool = 0;
+let boyBaseY = 0, camY = 0, detour = 0, detourSide = 1, stuck = 0, region = 'forest', swimPh = 0, rippleCool = 0;
 let playing = false, cheer = 0, walkPh = 0, gWalkPh = 0, cicadaCool = 3;
 const clock = new THREE.Clock();
 const tmpV = new V3();
@@ -2278,7 +2574,7 @@ function frame() {
 
   // 주인공 이동: 끌기(조이스틱) 또는 톡 한 곳까지
   const inWater = isWater(bp.x, bp.z);
-  const speed = inWater ? 3.8 : 5.5;
+  const speed = (inWater ? 3.8 : 5.5) * (riding ? 1.7 : 1);
   let moving = false;
   lockedCool -= dt;
   const kv = keyVec(); if (kv) { moveQueue = []; pendingCreature = null; }
@@ -2322,22 +2618,35 @@ function frame() {
   if (inWater && !save.swimTold && playing && !blocked()) { save.swimTold = true; persist(); say(MSG.swim, true, 3000); sfx.splash(); }
   updateSat();
 
-  // 주인공 몸짓 (걷기 / 헤엄)
+  // 주인공 몸짓 (걷기 / 헤엄 / 골디 타기)
   const sw = moving ? 1 : 0;
-  if (inWater) {
+  if (riding) {
+    boy.legs[0].rotation.x = -1.2; boy.legs[1].rotation.x = -1.2;
+    boy.arms[0].rotation.x = -0.9 + (moving ? Math.sin(t * 10) * 0.18 : 0); boy.arms[1].rotation.x = -0.9 - (moving ? Math.sin(t * 10) * 0.18 : 0);
+    if (inWater) { rippleCool -= dt; if (rippleCool < 0) { spawnRipple(bp); rippleCool = moving ? 0.3 : 1.1; } }
+  } else if (inWater) {
     swimPh += dt * (moving ? 7 : 2.5);
     boy.arms[0].rotation.x = -1.6 + Math.sin(swimPh) * 1.4; boy.arms[1].rotation.x = -1.6 - Math.sin(swimPh) * 1.4;
     boy.legs[0].rotation.x = Math.sin(swimPh * 2) * 0.4; boy.legs[1].rotation.x = -Math.sin(swimPh * 2) * 0.4;
     rippleCool -= dt; if (rippleCool < 0) { spawnRipple(bp); rippleCool = moving ? 0.35 : 1.1; }
   } else {
+    const prevStep = Math.floor(walkPh / Math.PI);
     walkPh += dt * (moving ? 11 : 0);
+    if (moving && Math.floor(walkPh / Math.PI) !== prevStep) stepSound(rNow);
     const s1 = moving ? Math.sin(walkPh) : 0;
     boy.legs[0].rotation.x = s1 * 0.6; boy.legs[1].rotation.x = -s1 * 0.6;
     boy.arms[0].rotation.x = -s1 * 0.5; boy.arms[1].rotation.x = s1 * 0.5;
   }
-  let by = inWater ? -0.62 + Math.sin(t * 2) * 0.04 : groundH(bp.x, bp.z) + (moving ? Math.abs(Math.sin(walkPh)) * 0.06 : Math.sin(t * 2) * 0.01);
-  if (cheer > 0 && !inWater) { cheer = Math.max(0, cheer - dt * 1.2); by += Math.sin((1 - cheer) * Math.PI * 2) ** 2 * 0.35 * cheer; boy.arms.forEach(a => a.rotation.x = -2.6 * cheer); }
-  boy.group.position.y += (by - boy.group.position.y) * Math.min(1, dt * 8);
+  let by = riding ? (inWater ? -0.55 : groundH(bp.x, bp.z)) + 0.42 + (moving ? Math.abs(Math.sin(gWalkPh)) * 0.08 : 0)
+    : inWater ? -0.62 + Math.sin(t * 2) * 0.04 : groundH(bp.x, bp.z) + (moving ? Math.abs(Math.sin(walkPh)) * 0.06 : Math.sin(t * 2) * 0.01);
+  if (cheer > 0 && !inWater && !riding) { cheer = Math.max(0, cheer - dt * 1.2); by += Math.sin((1 - cheer) * Math.PI * 2) ** 2 * 0.35 * cheer; boy.arms.forEach(a => a.rotation.x = -2.6 * cheer); }
+  // 점프 (물에서도 퐁)
+  if (jumpV !== 0 || jumpY > 0) {
+    jumpV -= 20 * dt; jumpY += jumpV * dt;
+    if (jumpY <= 0) { jumpY = 0; jumpV = 0; if (!inWater) tone(150, 0.06, 'triangle', 0.05); else { spawnRipple(bp); sfx.splash(); } }
+  }
+  boyBaseY += (by - boyBaseY) * Math.min(1, dt * 8);
+  boy.group.position.y = boyBaseY + jumpY;
   boy.head.rotation.x = hold ? 0.25 : (inWater ? -0.2 : 0);
   boy.group.scale.y = hold ? 0.9 : 1; // 살금살금 웅크리기
   void sw;
@@ -2355,7 +2664,18 @@ function frame() {
 
   // 골디
   goldieThink(dt); updateFetch(dt);
-  const gg = goldieGoal(), gp = goldie.group.position;
+  const gp = goldie.group.position;
+  if (riding) { // 골디 등에 탔을 때: 주인공 밑에서 함께 달린다
+    gp.x = bp.x; gp.z = bp.z; goldie.group.rotation.y = boy.group.rotation.y;
+    gWalkPh += dt * (moving ? 16 : 0);
+    goldie.legs.forEach((l, i) => l.rotation.x = moving ? Math.sin(gWalkPh + (i < 2 ? 0 : 2)) * 0.8 : 0);
+    goldie.tail.rotation.y = Math.sin(t * 14) * 0.6;
+    goldie.ears.forEach((e, i) => e.rotation.x = moving ? -0.4 + Math.sin(gWalkPh + i) * 0.2 : 0);
+    goldie.head.rotation.z = 0;
+    gp.y = (inWater ? -0.55 : groundH(bp.x, bp.z)) + (moving ? Math.abs(Math.sin(gWalkPh)) * 0.08 : 0) + jumpY;
+    if (moving && Math.floor(gWalkPh / Math.PI) !== Math.floor((gWalkPh - dt * 16) / Math.PI) && !inWater) stepSound(rNow);
+  } else {
+  const gg = goldieGoal();
   tmpV.subVectors(gg.p, gp).setY(0);
   const gd = tmpV.length();
   let gMoving = false;
@@ -2375,6 +2695,7 @@ function frame() {
   goldie.ears.forEach((e, i) => e.rotation.x = gMoving ? Math.sin(gWalkPh + i) * 0.25 : 0);
   const gyT = gWater ? -0.55 : groundH(gp.x, gp.z) + (gMoving ? Math.abs(Math.sin(gWalkPh)) * 0.05 : 0);
   gp.y += (gyT - gp.y) * Math.min(1, dt * 8);
+  }
 
   // 친구들
   const tgt = cur() && cur().type === 'meet' ? byId(cur().target) : null;
@@ -2405,6 +2726,7 @@ function frame() {
 
   // 미니게임·악당
   updateItems(dt, t); updateClouds(dt, t); updateSumo(dt, t);
+  updateStars(dt, t); updateChests(dt, t); updateSparks(dt); updateMusic();
   if (smogiHurt > 0) smogiHurt = Math.max(0, smogiHurt - dt * 0.6);
   const bossWho = cur() && cur().type === 'boss' ? (cur().villain || 'smogi') : null;
   for (const [who, v] of Object.entries(actors)) {
@@ -2491,12 +2813,13 @@ refreshHud();
 $('#startBtn').onclick = () => {
   initAudio(); sfx.pop(); preloadVoices();
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } // iOS 음성 잠금 풀기
-  $('#title').classList.add('hide'); playing = true;
+  $('#title').classList.add('hide'); playing = true; $('#actBtns').classList.remove('hide'); paintWallet();
   if (!save.found.goldie) {
     goldie.group.position.set(-6, 0, 2);
     setTimeout(() => { sfx.bark(); say(MSG.dogComing, true, 2200); }, 400);
     setTimeout(() => { save.found.goldie = true; persist(); sfx.chime(); cardBookId = 'goldie'; openCard('goldie', true, null); }, 2600);
   } else if (save.done) say(MSG.backDone);
+  else if (!save.toldFun) { save.toldFun = true; persist(); say(MSG.newFun, true, 6000); setTimeout(() => startMission(), 6500); }
   else { speak(MSG.back); setTimeout(() => startMission(), 2600); }
 };
 // 부모용 설정: 톱니를 1초 꾹
@@ -2506,12 +2829,14 @@ $('#gear').addEventListener('pointerdown', () => { gearT = setTimeout(openSettin
 function paintSettings() {
   $('#setVoice').textContent = save.voice ? '🗣️ 읽어 주기: 켬' : '🗣️ 읽어 주기: 끔';
   $('#setSound').textContent = save.sound ? '🔔 효과음: 켬' : '🔔 효과음: 끔';
+  $('#setMusic').textContent = save.music !== false ? '🎵 배경음악: 켬' : '🎵 배경음악: 끔';
 }
 function openSettings() { paintSettings(); $('#settings').classList.remove('hide'); }
 $('#setVoice').onclick = () => { save.voice = !save.voice; persist(); if (!save.voice) hush(); paintSettings(); };
 $('#setSound').onclick = () => { save.sound = !save.sound; persist(); paintSettings(); };
+$('#setMusic').onclick = () => { save.music = save.music === false; persist(); paintSettings(); };
 $('#setReset').onclick = () => { if (confirm('도감과 진행을 모두 지우고 처음부터 할까요?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } };
 $('#setClose').onclick = () => $('#settings').classList.add('hide');
 
 // 시험용 (부모 확인)
-window.__game = { get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };
+window.__game = { renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };

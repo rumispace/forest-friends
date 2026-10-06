@@ -7,7 +7,7 @@ const $ = s => document.querySelector(s);
 const V3 = THREE.Vector3;
 
 // ───────── 대본 불러오기 ─────────
-const STORY = await (await fetch('story.json?v=4')).json();
+const STORY = await (await fetch('story.json?v=' + window.GAME_VER)).json();
 const FRIENDS = STORY.friends, MSG = STORY.msg, REGIONS = STORY.regions;
 const DEF = Object.fromEntries(FRIENDS.map(f => [f.id, f]));
 const ALL_IDS = FRIENDS.filter(f => !f.companion).map(f => f.id);
@@ -70,7 +70,7 @@ const sfx = {
 // ───────── 성우 음성 ─────────
 // 미리 녹음한 파일(voice/)을 Web Audio 로 재생한다. 파일이 없는 대사만 기기 음성으로 대신 읽는다.
 let voiceIdx = {};
-fetch('voice/index.json?v=4').then(r => r.json()).then(j => { voiceIdx = j; }).catch(() => {});
+fetch('voice/index.json?v=' + window.GAME_VER).then(r => r.json()).then(j => { voiceIdx = j; }).catch(() => {});
 const norm = s => s.split(/\s+/).filter(Boolean).join(' ');
 const voiceBytes = new Map();     // 파일 → mp3 바이트 (작아서 전부 기억해도 된다)
 function voiceFile(text) { return voiceIdx[norm(text)] || null; }

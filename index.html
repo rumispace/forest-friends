@@ -9,7 +9,6 @@
 <title>숲속 친구들 탐험대</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Jua&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
 <script type="importmap">{"imports":{"three":"./lib/three.module.min.js"}}</script>
 </head>
 <body>
@@ -103,6 +102,20 @@
   </div>
 </div>
 
-<script type="module" src="game.js?v=4"></script>
+<script>
+// 새 버전 자동 받기: version.json 의 번호로 파일을 불러온다.
+// 앱으로 다시 돌아왔을 때 번호가 바뀌었으면 새로고침 (진행은 기기에 저장돼 있어 그대로)
+(async () => {
+  const ver = async () => (await (await fetch('version.json?t=' + Date.now(), { cache: 'no-store' })).json()).v;
+  let v = 'dev'; try { v = await ver(); } catch (e) {}
+  window.GAME_VER = v;
+  const l = document.createElement('link'); l.rel = 'stylesheet'; l.href = 'style.css?v=' + v; document.head.appendChild(l);
+  const s = document.createElement('script'); s.type = 'module'; s.src = 'game.js?v=' + v; document.body.appendChild(s);
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible') return;
+    try { if ((await ver()) !== window.GAME_VER) location.reload(); } catch (e) {}
+  });
+})();
+</script>
 </body>
 </html>

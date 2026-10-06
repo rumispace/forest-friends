@@ -19,6 +19,7 @@ VOICES = {
     "friend": ("ko-KR-SunHiNeural", "+2%", "+22Hz"),    # 골디·숲속 친구들: 더 귀엽게
     "smogi":  ("ko-KR-InJoonNeural", "+8%", "+4Hz"),    # 악당 스모기: 장난스러운 남자 목소리
     "boss":   ("ko-KR-HyunsuMultilingualNeural", "-12%", "-14Hz"),  # 먹구름 대마왕: 낮고 느리게
+    "jjiri":  ("ko-KR-HyunsuMultilingualNeural", "+14%", "+24Hz"),  # 번개 꼬마 찌릿이: 빠르고 높게
 }
 
 ROOT = Path(__file__).parent
@@ -42,7 +43,7 @@ def lines(story):
         for key in ("lines", "before", "after"):
             for ln in m.get(key, []):
                 who = ln["who"]
-                add(ln["text"], who if who in ("narr", "smogi", "boss") else "friend")
+                add(ln["text"], who if who in ("narr", "smogi", "boss", "jjiri") else "friend")
     for v in story["msg"].values():
         for x in (v if isinstance(v, list) else [v]): add(x)
     return out

@@ -13,25 +13,36 @@ from pathlib import Path
 
 import edge_tts
 
-VOICE = "ko-KR-SunHiNeural"   # 밝은 여자 성우 음색
-RATE, PITCH = "-6%", "+8Hz"   # 아이용: 조금 느리고 밝게
+# 역할별 목소리 (이름, 속도, 높이)
+VOICES = {
+    "narr":   ("ko-KR-SunHiNeural", "-6%", "+8Hz"),     # 해설: 밝은 여자 성우
+    "friend": ("ko-KR-SunHiNeural", "+2%", "+22Hz"),    # 골디·숲속 친구들: 더 귀엽게
+    "smogi":  ("ko-KR-InJoonNeural", "+8%", "+4Hz"),    # 악당 스모기: 장난스러운 남자 목소리
+    "boss":   ("ko-KR-HyunsuMultilingualNeural", "-12%", "-14Hz"),  # 먹구름 대마왕: 낮고 느리게
+}
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "voice"
 
 
 def lines(story):
-    out = []
-    def add(s):
+    """(대사, 목소리) 목록. 같은 대사는 한 번만."""
+    out, seen = [], set()
+    def add(s, who="narr"):
         s = " ".join(s.split())
-        if s and s not in out:
-            out.append(s)
+        if s and s not in seen:
+            seen.add(s); out.append((s, who))
     for f in story["friends"]:
         add(f["intro"]); add(f.get("arrive", ""))
         for x in f["facts"]: add(x)
     for r in story["regions"].values(): add(r["enter"])
+    for c in story.get("chapters", []): add(c["doneText"])
     for m in story["missions"]:
         add(m["text"]); add(m["text"] + "!"); add(m.get("announce", ""))
+        for key in ("lines", "before", "after"):
+            for ln in m.get(key, []):
+                who = ln["who"]
+                add(ln["text"], who if who in ("narr", "smogi", "boss") else "friend")
     for v in story["msg"].values():
         for x in (v if isinstance(v, list) else [v]): add(x)
     return out
@@ -43,14 +54,15 @@ async def main():
     redo = "--all" in sys.argv
     index = {}
     todo = []
-    for s in lines(story):
-        name = hashlib.sha1(s.encode()).hexdigest()[:10] + ".mp3"
+    for s, who in lines(story):
+        name = hashlib.sha1((who + "|" + s).encode()).hexdigest()[:10] + ".mp3"
         index[s] = name
         if redo or not (OUT / name).exists():
-            todo.append((s, name))
-    for i, (s, name) in enumerate(todo, 1):
-        print(f"[{i}/{len(todo)}] {s}")
-        await edge_tts.Communicate(s, VOICE, rate=RATE, pitch=PITCH).save(str(OUT / name))
+            todo.append((s, who, name))
+    for i, (s, who, name) in enumerate(todo, 1):
+        print(f"[{i}/{len(todo)}] ({who}) {s}")
+        voice, rate, pitch = VOICES[who]
+        await edge_tts.Communicate(s, voice, rate=rate, pitch=pitch).save(str(OUT / name))
     (OUT / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=0))
     keep = set(index.values()) | {"index.json"}
     for f in OUT.iterdir():

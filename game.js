@@ -13,8 +13,8 @@ const DEF = Object.fromEntries(FRIENDS.map(f => [f.id, f]));
 const ALL_IDS = FRIENDS.filter(f => !f.companion).map(f => f.id);
 
 // ───────── 저장 ─────────
-const SAVE_KEY = 'forest.save.v1';
-const save = { found: {}, flashlight: false, night: false, voice: true, sound: true, done: false };
+const SAVE_KEY = 'forest.save.v2';   // 이야기 버전 (v1 은 이야기 없던 때)
+const save = { step: 0, found: {}, flashlight: false, night: false, voice: true, sound: true, done: false, swimTold: false };
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 
@@ -515,15 +515,19 @@ const PATH = { valley: { x0: -3.4, x1: 3.4, z0: -41, z1: -29 }, beach: { x0: 29,
 const inRect = (r, x, z, m = 0) => x > r.x0 - m && x < r.x1 + m && z > r.z0 - m && z < r.z1 + m;
 const rectDist = (r, x, z) => Math.hypot(Math.max(r.x0 - x, 0, x - r.x1), Math.max(r.z0 - z, 0, z - r.z1));
 const gates = {}; // valley / beach 길막이
+// 헤엄칠 수 있는 물: 계곡 개울, 바닷가 앞바다
+function isWater(x, z) {
+  return (inRect(STREAM, x, z) && x > -29.5 && x < 29) || (x > SEA_X - 0.6 && x < SEA_X + 12 && Math.abs(z) < 21);
+}
 function walkable(x, z) {
   if (Math.hypot(x, z) < FOREST_R) return true;
   if (inRect(PATH.valley, x, z)) return !!gates.valley?.open;
   if (inRect(PATH.beach, x, z)) return !!gates.beach?.open;
-  return inRect(VALLEY, x, z) || inRect(BEACH, x, z);
+  return inRect(VALLEY, x, z) || inRect(BEACH, x, z) || isWater(x, z);
 }
 function regionAt(x, z) {
-  if (inRect(VALLEY, x, z, 2) || (inRect(PATH.valley, x, z) && z < -36)) return 'valley';
-  if (inRect(BEACH, x, z, 2) || (inRect(PATH.beach, x, z) && x > 38)) return 'beach';
+  if (inRect(VALLEY, x, z, 2) || inRect(STREAM, x, z) || (inRect(PATH.valley, x, z) && z < -36)) return 'valley';
+  if (inRect(BEACH, x, z, 2) || x > SEA_X - 2 || (inRect(PATH.beach, x, z) && x > 38)) return 'beach';
   return 'forest';
 }
 // 평지(걷는 곳·물)에서 얼마나 떨어졌나 → 언덕 높이
@@ -588,10 +592,19 @@ function makeTree(kind, s = 1) {
     for (const [x, y, z, r] of [[0, 4, 0, 1.8], [1.3, 3.5, 0.4, 1.3], [-1.2, 3.6, -0.3, 1.4], [0.2, 3.4, 1.2, 1.2], [-0.3, 3.5, -1.2, 1.2]])
       g.add(at(blob(r * s, r * 0.85 * s, r * s, LEAF[(x > 0) + (z > 0)]), x * s, y * s, z * s));
   }
+  g.userData.tree = { kind, s };
   return g;
 }
 const TRUNK_R = { pine: 0.26, round: 0.3, oak: 0.6, seapine: 0.3 };
-function place(obj, x, z, colR) { obj.position.set(x, groundH(x, z), z); deco.add(obj); if (colR) colliders.push({ x, z, r: colR }); return obj; }
+// 나무가 카메라와 친구 사이를 가리는지 계산하려고 잎·줄기를 공 모양으로 기억해 둔다
+const occluders = [];
+const OCC = { pine: [[0, 1.9, 0, 1.4], [0, 3.2, 0, 0.9]], round: [[0, 2.6, 0, 1.45], [0, 1, 0, 0.35]], oak: [[0, 3.8, 0, 2.2], [0, 1.6, 0, 0.7]], seapine: [[0.4, 2.7, 0, 1.3]] };
+function place(obj, x, z, colR) {
+  const y = groundH(x, z); obj.position.set(x, y, z); deco.add(obj); if (colR) colliders.push({ x, z, r: colR });
+  const tr = obj.userData.tree;
+  if (tr) for (const [ox, oy, oz, r] of OCC[tr.kind]) occluders.push({ c: new V3(x + ox * tr.s, y + oy * tr.s, z + oz * tr.s), r: r * tr.s });
+  return obj;
+}
 function rock(s, color = 0xa4a9a0) { const r = new THREE.Mesh(new THREE.DodecahedronGeometry(s, 0), mat(color)); r.castShadow = true; r.receiveShadow = true; r.rotation.set(rand(), rand(), rand()); return r; }
 
 // 주요 장소
@@ -609,9 +622,21 @@ const SPOT = {
   crab: new V3(58, 0, 8),
   hermit: new V3(65, 0, -11),
   pool: new V3(70, 0, 2),
+  // 스모기가 나타나는 곳 (연기 구름 미니게임)
+  oakBoss: new V3(-2.5, 0, -3.5),
+  fallBoss: new V3(-24, 0, -54),
+  seaBoss: new V3(85, 0, -6),
+};
+// 줍기 미니게임 물건 자리
+const ITEM_SPOTS = {
+  acorn: [[-15, 9], [-8, 11.5], [-17, 2], [-9, 2.5], [-14, 12.5]],
+  stream: [[-21, -60], [-14, -61.5], [-4, -59.5], [4, -61], [13, -60], [23, -61.5]],
+  beach: [[49, -7], [55, 13.5], [61, -18], [68, 11], [73, -5], [80, 7]],
+  shell: [[47, 16], [53, -19], [66, 17], [74, -15]],
 };
 const keepOut = [[SPOT.start, 7], [new V3(0, 0, 14), 5], [SPOT.bigOak, 4.5], [SPOT.cicadaTree, 3.5], [SPOT.log, 3.5], [SPOT.bush, 3], [SPOT.pond, 5.5], [SPOT.ball, 3], [new V3(0, 0, 0), 3],
-  [SPOT.minnow, 5], [SPOT.crayRock, 4], [SPOT.kfTree, 4], [SPOT.crab, 5], [SPOT.hermit, 4], [SPOT.pool, 5]];
+  [SPOT.minnow, 5], [SPOT.crayRock, 4], [SPOT.kfTree, 4], [SPOT.crab, 5], [SPOT.hermit, 4], [SPOT.pool, 5],
+  [SPOT.oakBoss, 5], [SPOT.fallBoss, 5], ...Object.values(ITEM_SPOTS).flat().map(([x, z]) => [new V3(x, 0, z), 1.6])];
 function freeAt(x, z, r) {
   for (const [p, k] of keepOut) if (Math.hypot(x - p.x, z - p.z) < k + r) return false;
   for (const c of colliders) if (Math.hypot(x - c.x, z - c.z) < c.r + r + 0.6) return false;
@@ -706,6 +731,8 @@ for (let n = 0; n < 220; n++) {
   // 소라게 근처 바위
   for (const [dx, dz, s] of [[-1.5, -1.2, 0.7], [1.2, -1.6, 0.55]]) { const rk = rock(s, 0x8f8f86); rk.position.set(SPOT.hermit.x + dx, s * 0.3, SPOT.hermit.z + dz); deco.add(rk); colliders.push({ x: SPOT.hermit.x + dx, z: SPOT.hermit.z + dz, r: s * 0.9 }); }
 }
+// 바다 위 바위 (스모기 마지막 자리)
+{ const rk = rock(1.8, 0x7f8a85); rk.scale.y = 0.9; rk.position.set(SPOT.seaBoss.x, -0.4, SPOT.seaBoss.z); deco.add(rk); colliders.push({ x: SPOT.seaBoss.x, z: SPOT.seaBoss.z, r: 1.8 }); }
 // 바다
 const sea = new THREE.Mesh(new THREE.PlaneGeometry(120, 160), new THREE.MeshStandardMaterial({ color: 0x3fa9d6, roughness: 0.15, transparent: true, opacity: 0.85, depthWrite: false }));
 sea.rotation.x = -Math.PI / 2; sea.position.set(SEA_X + 59.5, -0.12, 0); sea.renderOrder = 1; scene.add(sea);
@@ -976,15 +1003,65 @@ function standFrom(center, dir, dist) { return new V3(center.x + dir.x * dist, 0
   });
 }
 
-// ───────── 미션 목록 (낮·밤과 길 열림을 먼저 정해 둔다) ─────────
-const MISSIONS = STORY.missions;
-const missionDone = m => m.type === 'meet' ? !!save.found[m.target] : !!save.ballDone;
-let mIdx = MISSIONS.findIndex(m => !missionDone(m)); if (mIdx < 0) mIdx = MISSIONS.length;
-save.done = mIdx >= MISSIONS.length;
-const NIGHT_MISSIONS = MISSIONS.map((m, i) => m.type === 'meet' && DEF[m.target].time === 'night' ? i : -1).filter(i => i >= 0);
-if (NIGHT_MISSIONS.includes(mIdx)) { save.flashlight = true; save.night = true; }
-else if (!save.done) save.night = false;
-MISSIONS.forEach((m, i) => { if (m.opens && mIdx >= i) { const g = gates[m.opens]; g.open = true; g.k = 0; g.mesh.visible = false; } });
+// ───────── 악당·물건 모델 ─────────
+// 잿빛 마법사 스모기: 뭉게뭉게 회색 구름 몸 + 보라 마법사 모자 + 심술 눈썹 (무섭지 않게)
+function makeSmogi() {
+  const g = new THREE.Group();
+  const GRAY = 0x8f949e, LIGHT = 0xb9bdc6;
+  const body = new THREE.Group(); g.add(body);
+  body.add(blob(0.62, 0.55, 0.55, GRAY, {}, true));
+  for (const [x, y, z, r] of [[-0.5, -0.1, 0, 0.36], [0.5, -0.1, 0, 0.36], [0, -0.35, 0.1, 0.4], [-0.3, 0.35, -0.1, 0.32], [0.32, 0.32, -0.1, 0.3]]) body.add(at(blob(r, r * 0.9, r, LIGHT, {}, true), x, y, z));
+  const brows = [];
+  for (const s of [-1, 1]) {
+    body.add(at(eye(0.12), 0.2 * s, 0.08, 0.46));
+    const b = at(blob(0.13, 0.03, 0.03, 0x2a2a35), 0.2 * s, 0.25, 0.52); b.rotation.z = -0.45 * s; body.add(b); brows.push({ b, s });
+  }
+  const mouth = mesh(new THREE.TorusGeometry(0.1, 0.025, 5, 10, Math.PI), mat(0x2a2a35)); mouth.position.set(0, -0.12, 0.53); body.add(mouth);
+  const hat = new THREE.Group(); hat.position.set(0.05, 0.5, -0.05); hat.rotation.z = -0.2; body.add(hat);
+  hat.add(at(cyl(0.42, 0.42, 0.05, 0x5b3c88, 12), 0, 0, 0));
+  const tip = cone(0.3, 0.75, 0x5b3c88, 8); tip.position.y = 0.38; tip.rotation.z = -0.15; hat.add(tip);
+  hat.add(at(blob(0.08, 0.08, 0.03, 0xffd23f, { emissive: 0xffc400, ei: 0.4 }), 0.05, 0.32, 0.24));
+  const wand = new THREE.Group(); wand.position.set(0.62, -0.05, 0.15); body.add(wand);
+  const stick = cyl(0.025, 0.025, 0.6, 0x4a2a10, 5); stick.rotation.z = -0.6; stick.position.set(0.15, 0.15, 0); wand.add(stick);
+  wand.add(at(blob(0.07, 0.07, 0.07, 0x9aa0aa, { emissive: 0x666a77, ei: 0.4 }), 0.32, 0.38, 0));
+  return { group: g, body, brows, mouth, wand };
+}
+// 먹구름 대마왕: 하늘 저편의 커다란 먹구름 (마지막에 잠깐 등장)
+function makeStormKing() {
+  const g = new THREE.Group();
+  for (const [x, y, z, r] of [[0, 0, 0, 5], [-5, -1, 0, 3.6], [5, -1, 0, 3.6], [-2.5, 2.6, 0, 3], [2.8, 2.4, 0, 3]]) g.add(at(blob(r, r * 0.8, r * 0.7, 0x3a3f4f, { opacity: 0.95 }, true), x, y, z));
+  for (const s of [-1, 1]) { g.add(at(blob(0.9, 0.5, 0.2, 0xff4d4d, { emissive: 0xff2222, ei: 0.8 }), 1.6 * s, 0.6, 3.4)); const b = at(blob(1.2, 0.2, 0.2, 0x111111), 1.6 * s, 1.4, 3.5); b.rotation.z = -0.4 * s; g.add(b); }
+  return g;
+}
+function makeItem(kind, i) {
+  const g = new THREE.Group();
+  if (kind === 'acorn') {
+    g.add(at(blob(0.16, 0.2, 0.16, 0x9a5b2a, {}, true), 0, 0.2, 0));
+    g.add(at(blob(0.18, 0.09, 0.18, 0x5c3a1a), 0, 0.36, 0));
+    g.add(at(cyl(0.02, 0.02, 0.1, 0x5c3a1a, 4), 0, 0.46, 0));
+  } else if (kind === 'shell') {
+    for (let k = 0; k < 4; k++) { const r = 0.2 - k * 0.045; g.add(at(blob(r, r * 0.9, r, k % 2 ? 0xf2a7b5 : 0xffe1e6, {}, true), 0, 0.15 + k * 0.1, -k * 0.04)); }
+  } else { // 쓰레기: 페트병·캔·비닐
+    const t = i % 3;
+    if (t === 0) { const b = cyl(0.1, 0.1, 0.42, 0x9fd8f0, 8, { opacity: 0.8 }); b.rotation.z = Math.PI / 2; b.position.y = 0.12; g.add(b); const cap = cyl(0.05, 0.05, 0.08, 0x2f6fe0, 6); cap.rotation.z = Math.PI / 2; cap.position.set(0.25, 0.12, 0); g.add(cap); }
+    else if (t === 1) { const c = cyl(0.1, 0.1, 0.24, 0xe2533f, 8); c.rotation.x = Math.PI / 2; c.position.y = 0.1; g.add(c); g.add(at(cyl(0.101, 0.101, 0.06, 0xd8d8d8, 8), 0, 0.1, 0)).rotation.x = Math.PI / 2; }
+    else { g.add(at(blob(0.25, 0.14, 0.2, 0xf4f4f4, { opacity: 0.85 }), 0, 0.12, 0)); g.add(at(blob(0.06, 0.12, 0.04, 0xf4f4f4), 0.12, 0.28, 0)); }
+  }
+  return g;
+}
+
+// ───────── 미션 목록·진행 상태 ─────────
+const MISSIONS = STORY.missions, CHAPTERS = STORY.chapters, SPEAK = STORY.speakers;
+const chapterOf = m => CHAPTERS.find(c => c.id === m.ch);
+let step = Math.min(save.step || 0, MISSIONS.length);
+save.done = step >= MISSIONS.length;
+const cur = () => MISSIONS[step] || null;
+// 길: 이미 지나온 미션이 연 길은 열어 둔다
+MISSIONS.forEach((m, i) => { if (m.opens && step > i) { const g = gates[m.opens]; g.open = true; g.k = 0; g.mesh.visible = false; } });
+// 낮·밤: 지금 미션이 정한 대로 (정하지 않았으면 앞 미션들 중 마지막 지정)
+function nightFor(idx) { for (let i = Math.min(idx, MISSIONS.length - 1); i >= 0; i--) if (MISSIONS[i].night != null) return MISSIONS[i].night; return false; }
+if (!save.done) save.night = nightFor(step);
+if (step > MISSIONS.findIndex(m => m.reward === 'flashlight')) save.flashlight = true;
 
 // ───────── 낮·밤 ─────────
 let nightK = save.night ? 1 : 0;   // 0 낮 ~ 1 밤
@@ -1003,6 +1080,7 @@ function applyTime(k) {
   document.querySelector('meta[name=theme-color]').content = '#' + scene.background.getHexString();
 }
 applyTime(nightK);
+function setNight(on) { nightTarget = on ? 1 : 0; save.night = on; persist(); refreshHud(); }
 
 // ───────── 화면 크기 ─────────
 let camDist = 1, camAhead = 2;
@@ -1019,10 +1097,12 @@ addEventListener('resize', resize); resize();
 
 // ───────── 정보창·말풍선 ─────────
 function foundCount() { return ALL_IDS.filter(id => save.found[id]).length; }
+function gemDone(ch) { const bi = MISSIONS.findIndex(m => m.ch === ch.id && m.type === 'boss'); return step > bi; }
 function refreshHud() {
   const n = foundCount();
   $('#lvlText').textContent = `탐험가 Lv.${1 + n}`;
   $('#stars').textContent = `🌟 ${n} / ${ALL_IDS.length}`;
+  $('#gems').innerHTML = CHAPTERS.map(c => `<span class="${gemDone(c) ? 'on' : ''}">${c.gemIcon}</span>`).join('');
   $('#timeBtn').hidden = !save.done;
   $('#timeBtn').textContent = nightTarget ? '☀️' : '🌙';
 }
@@ -1034,6 +1114,20 @@ function say(lines, voice = true, ms = 4500) {
   const el = $('#msg'); el.classList.remove('hide'); el.style.animation = 'none'; el.offsetHeight; el.style.animation = '';
   clearTimeout(msgTimer); msgTimer = setTimeout(() => el.classList.add('hide'), ms);
   if (voice) speak(arr);
+}
+
+// ───────── 잿빛 효과: 스모기가 구슬을 가져간 지역은 색이 바래고, 친구를 도울수록 돌아온다 ─────────
+function regionSat(region) {
+  const ch = CHAPTERS.find(c => c.region === region); if (!ch) return 1;
+  const first = MISSIONS.findIndex(m => m.ch === ch.id), boss = MISSIONS.findIndex(m => m.ch === ch.id && m.type === 'boss');
+  if (step <= first || step > boss) return 1;
+  return 0.3 + 0.55 * (step - first - 1) / (boss - first);
+}
+let satNow = -1;
+function updateSat() {
+  const s = Math.round(regionSat(regionAt(boy.group.position.x, boy.group.position.z)) * 100) / 100;
+  if (s === satNow) return; satNow = s;
+  renderer.domElement.style.filter = s >= 0.99 ? 'none' : `saturate(${s}) brightness(${0.94 + s * 0.06})`;
 }
 
 // ───────── 친구 카드 ─────────
@@ -1083,10 +1177,10 @@ function closeCard() {
   const wasNew = cardIsNew, c = cardCreature;
   if (wasNew && c) {
     c.hop = 1; spawnHearts(c.holder.getWorldPosition(new V3()));
-    setTimeout(() => say(MSG.bye, true, 2500), 250);
-    setTimeout(() => { if (cur() && cur().target === c.id) completeMission(); }, 2600);
+    say(MSG.bye, true, 2000);
+    setTimeout(() => { if (cur() && cur().target === c.id) completeMission(); }, 1900);
   }
-  if (wasNew && !c) setTimeout(() => startMission(true), 500); // 골디 첫 인사 뒤 첫 미션
+  if (wasNew && !c) setTimeout(() => startMission(), 400); // 골디 첫 인사 뒤 이야기 시작
 }
 $('#cardSpeak').onclick = () => { sfx.tap(); readCard(DEF[cardBookId || (cardCreature ? cardCreature.id : 'goldie')]); };
 $('#cardClose').onclick = closeCard;
@@ -1115,58 +1209,134 @@ $('#bookClose').onclick = () => { sfx.pop(); $('#book').classList.add('hide'); }
 
 // ───────── 아이템·이벤트 카드 ─────────
 let itemThen = null;
-function showItem(icon, title, text, then) {
+function showItem(icon, title, text, then, voiceLines) {
   $('#itemIcon').textContent = icon; $('#itemTitle').textContent = title; $('#itemText').textContent = text;
+  $('#itemClose').textContent = '좋아요!';
   $('#item').classList.remove('hide'); itemThen = then; sfx.item();
-  speak([title, text]);
+  speak(voiceLines || [title, text]);
 }
 $('#itemClose').onclick = () => { sfx.pop(); hush(); $('#item').classList.add('hide'); const t = itemThen; itemThen = null; t && t(); };
 
-// ───────── 미션 진행: 한 번에 하나씩, 골디가 길안내 ─────────
-const cur = () => MISSIONS[mIdx] || null;
+// ───────── 이야기 대화 (화면 아래 말상자) ─────────
+let talkOpen = false, talkSkip = null;
+async function playLines(lines, done) {
+  talkOpen = true; moveQueue = []; joy = null; $('#joy').classList.add('hide');
+  $('#msg').classList.add('hide');
+  const box = $('#talk'); box.classList.remove('hide');
+  for (const ln of lines) {
+    const sp = SPEAK[ln.who] || SPEAK.narr;
+    $('#talkIcon').textContent = sp.icon; $('#talkName').textContent = sp.name; $('#talkName').style.display = sp.name ? '' : 'none';
+    $('#talkText').textContent = ln.text;
+    box.className = 'who-' + ln.who; box.offsetHeight; box.classList.add('show');
+    if (ln.who === 'smogi') villainCome();
+    if (ln.who === 'boss') stormShow = 1;
+    await new Promise(res => {
+      let ended = false; const fin = () => { if (!ended) { ended = true; talkSkip = null; res(); } };
+      talkSkip = () => { hush(); fin(); };
+      speak(ln.text, null, () => setTimeout(fin, 700));
+      setTimeout(fin, 2500 + ln.text.length * 220); // 소리가 안 나도 넘어가게
+    });
+  }
+  box.classList.add('hide'); talkOpen = false;
+  done && done();
+}
+$('#talk').addEventListener('click', () => { sfx.tap(); talkSkip && talkSkip(); });
+
+// ───────── 스모기 ─────────
+const smogi = makeSmogi(); smogi.group.visible = false; scene.add(smogi.group);
+const villain = { state: 'off', pos: new V3(), k: 0, friendly: false };
+function villainCome(at) { // at 이 없으면 주인공 근처에 나타난다
+  if (villain.state === 'here' && !at) return;
+  const bp = boy.group.position;
+  villain.pos.copy(at || new V3(bp.x + 2.4, 0, bp.z - 2.6));
+  villain.state = 'come'; villain.k = 0; smogi.group.visible = true;
+}
+function villainLeave() { if (villain.state !== 'off') { villain.state = 'leave'; villain.k = 0; } }
+const storm = makeStormKing(); storm.visible = false; scene.add(storm);
+let stormShow = 0;
+
+// ───────── 미션 진행 ─────────
 const fetchState = { step: 'find', t: 0, from: new V3(), to: new V3() };
 const byId = id => creatures.find(c => c.id === id);
+let items = [];          // 줍기 미니게임 물건
+let clouds = [];         // 스모기 연기 구름
+let bossReady = false;   // 스모기 앞에 도착해 대사를 들었나
+function bossSpot(m) { return SPOT[m.at]; }
+function bossStand(m) { const p = bossSpot(m); return new V3(p.x, 0, p.z + 4); }
 // 지금 가야 할 곳 (없으면 null)
 function missionGoal() {
   const m = cur(); if (!m || !playing) return null;
   if (m.type === 'meet') { const c = byId(m.target); return c.appear > 0.6 ? { pos: c.stand, look: c.anchor, c } : null; }
-  if (fetchState.step === 'find') return { pos: SPOT.ball, look: SPOT.ball };
+  if (m.type === 'collect') {
+    const left = items.filter(it => !it.got); if (!left.length) return null;
+    const bp = boy.group.position; left.sort((a, b) => flatDist(a.pos, bp) - flatDist(b.pos, bp));
+    return { pos: left[0].pos, look: left[0].pos };
+  }
+  if (m.type === 'fetch') return fetchState.step === 'find' ? { pos: SPOT.ball, look: SPOT.ball } : null;
+  if (m.type === 'boss') return bossReady ? null : { pos: bossStand(m), look: bossSpot(m) };
   return null;
 }
-function openGate(region) {
-  const g = gates[region]; if (!g || g.open) return;
-  g.open = true; g.opening = true; sfx.item();
+function missionLabel() {
+  const m = cur(); if (!m) return '';
+  if (m.type === 'collect') return `${m.text} (${items.filter(i => i.got).length}/${items.length})`;
+  if (m.type === 'boss' && clouds.length) return `${m.text} (${clouds.filter(c => c.gone).length}/${clouds.length})`;
+  return m.text;
 }
-function startMission(first) {
+function paintMission() {
+  const m = cur(); const box = $('#mission');
+  if (!m || m.type === 'talk') { box.classList.add('hide'); return; }
+  const ch = chapterOf(m);
+  $('#mIcon').textContent = m.icon; $('#mText').textContent = missionLabel();
+  $('#mStep').textContent = `${ch.title.split('.')[0]} · 미션 ${step + 1} / ${MISSIONS.length}`;
+  box.classList.remove('hide');
+}
+function openGate(region) { const g = gates[region]; if (!g || g.open) return; g.open = true; g.opening = true; sfx.item(); }
+function clearMissionStuff() {
+  for (const it of items) scene.remove(it.mesh); items = [];
+  for (const c of clouds) scene.remove(c.mesh); clouds = [];
+  bossReady = false;
+}
+function startMission() {
+  clearMissionStuff();
   const m = cur();
-  const box = $('#mission');
-  if (!m) { box.classList.add('hide'); return; }
-  if (m.opens) { openGate(m.opens); if (nightTarget) setNight(false); }
-  $('#mIcon').textContent = m.icon; $('#mText').textContent = m.text;
-  $('#mStep').textContent = `미션 ${mIdx + 1} / ${MISSIONS.length}`;
-  box.classList.remove('hide', 'flash'); box.offsetHeight; box.classList.add('flash');
+  if (!m) { $('#mission').classList.add('hide'); return; }
+  if (m.opens) openGate(m.opens);
+  if (m.night != null && !!m.night !== !!nightTarget) setNight(!!m.night);
+  paintMission(); refreshHud();
+  const box = $('#mission'); box.classList.remove('flash'); box.offsetHeight; box.classList.add('flash');
+  if (m.type === 'talk') { playLines(m.lines, () => completeMission(true)); return; }
   if (m.type === 'fetch') { fetchState.step = 'find'; ballMesh.visible = true; ballMesh.position.copy(SPOT.ball).setY(0.25); }
+  if (m.type === 'collect') spawnItems(m);
+  if (m.type === 'boss') { villainCome(bossSpot(m)); }
+  paintMission();
   sfx.item();
-  say([m.announce || m.text + '!', first ? MSG.firstTip : MSG.follow], true, 6500);
+  if (m.type === 'sumo') { say(m.announce, true, 4000); setTimeout(openSumo, 3600); return; }
+  say([m.announce || m.text + '!', step <= 2 ? MSG.firstTip : MSG.follow], true, 6500);
 }
-function completeMission() {
-  const done = cur(); if (!done) return;
-  mIdx++; persist(); refreshHud();
-  sfx.chime(); cheer = 1;
-  say(MSG.success, true, 2600);
-  if (done.type === 'fetch') { // 다음은 밤 미션: 손전등을 받고 밤이 된다
-    setTimeout(() => {
-      save.flashlight = true; persist();
-      showItem('🔦', MSG.flashTitle, MSG.flashText, () => { setNight(true); setTimeout(() => startMission(), 3500); });
-    }, 2600);
-    return;
-  }
-  if (!cur()) {
-    save.done = true; persist(); $('#mission').classList.add('hide');
-    setTimeout(() => showItem('🏅', MSG.doneTitle, MSG.doneText, refreshHud), 2600);
-    return;
-  }
-  setTimeout(() => startMission(), 2800);
+function completeMission(quiet) {
+  const m = cur(); if (!m) return;
+  step++; save.step = step; save.done = step >= MISSIONS.length; persist();
+  refreshHud(); paintMission();
+  if (!quiet) { sfx.chime(); cheer = 1; }
+  const next = () => {
+    if (m.reward === 'flashlight') { save.flashlight = true; persist(); showItem('🔦', MSG.flashTitle, MSG.flashText, () => startMission()); return; }
+    if (m.type === 'boss') { chapterDone(m); return; }
+    startMission();
+  };
+  const after = () => m.after ? playLines(m.after, next) : next();
+  if (quiet) next();
+  else { say(MSG.success, true, 2200); setTimeout(after, 2300); }
+}
+function chapterDone(m) {
+  const ch = chapterOf(m);
+  villainLeave(); clearMissionStuff();
+  spawnHearts(boy.group.position.clone().setY(1.6)); cheer = 1;
+  const last = !cur();
+  showItem(ch.gemIcon, `${ch.title.split('.')[0]} 완료!`, ch.doneText, () => {
+    refreshHud();
+    if (last) showItem('🏅', MSG.partTitle, MSG.partText, () => { stormShow = 0; refreshHud(); }, [MSG.partTitle, MSG.partText]);
+    else startMission();
+  }, [ch.doneText]);
 }
 // 미션 카드를 톡 = 그곳까지 데려다주기
 $('#mission').onclick = () => {
@@ -1174,16 +1344,128 @@ $('#mission').onclick = () => {
   sfx.pop();
   const m = cur(); if (!m) return;
   if (m.type === 'fetch' && fetchState.step === 'carry') { say(MSG.ballTapDog, true, 3500); return; }
-  if (m.type === 'fetch' && fetchState.step !== 'find') return;
+  if (m.type === 'boss' && bossReady) { say(MSG.bossTip, true, 3000); return; }
   const g = missionGoal();
   if (!g) { say(MSG.wait, true, 2000); return; }
   pendingCreature = g.c || null; walkTo(g.pos.clone());
   speak(m.text);
 };
-function setNight(on) {
-  nightTarget = on ? 1 : 0; save.night = on; persist(); refreshHud();
-}
 $('#timeBtn').onclick = () => { sfx.pop(); setNight(!nightTarget); say(nightTarget ? MSG.nightOn : MSG.dayOn, true, 2500); };
+
+// 줍기 미니게임: 걸어가면 저절로 주워진다
+function spawnItems(m) {
+  const spots = ITEM_SPOTS[m.area || m.item];
+  items = spots.map(([x, z], i) => {
+    const mesh = makeItem(m.item, i); const water = isWater(x, z);
+    mesh.position.set(x, water ? -0.12 : 0, z); mesh.rotation.y = i; scene.add(mesh);
+    addXray(mesh, 0xffe066, 0.55);
+    return { mesh, pos: new V3(x, 0, z), got: false, water, ph: i * 1.3 };
+  });
+}
+function updateItems(dt, t) {
+  if (!items.length) return;
+  const bp = boy.group.position;
+  for (const it of items) {
+    if (it.got) { if (it.k > 0) { it.k -= dt * 2; it.mesh.position.y += dt * 2; it.mesh.scale.setScalar(Math.max(0.01, it.k)); if (it.k <= 0) it.mesh.visible = false; } continue; }
+    it.mesh.rotation.y += dt * 0.8;
+    it.mesh.position.y = (it.water ? -0.12 : 0.05) + Math.abs(Math.sin(t * 2 + it.ph)) * 0.12;
+    if (flatDist(bp, it.pos) < 1.3) {
+      it.got = true; it.k = 1; sfx.pop(); tone(1100, 0.15, 'triangle', 0.12, 0.06);
+      spawnHearts(it.pos.clone().setY(0.8)); paintMission();
+      const left = items.filter(x => !x.got).length;
+      if (left === 0) { say(MSG.allGot, true, 2000); setTimeout(() => completeMission(), 1800); }
+      else say(MSG.got, true, 1200);
+    }
+  }
+}
+
+// 스모기 연기 구름 미니게임: 구름을 톡 하면 펑 날아간다
+const cloudMat = new THREE.MeshStandardMaterial({ color: 0x7d828c, roughness: 1, flatShading: true, transparent: true, opacity: 0.92 });
+function spawnClouds(m) {
+  const c0 = bossSpot(m); const n = m.at === 'seaBoss' ? 10 : 8;
+  clouds = [];
+  for (let i = 0; i < n; i++) {
+    const a = i / n * Math.PI * 2, r = R(1.8, 2.8);
+    const g = new THREE.Group();
+    for (const [x, y, z, s] of [[0, 0, 0, 0.55], [-0.45, -0.1, 0, 0.4], [0.45, -0.08, 0, 0.42], [0, 0.3, 0, 0.38]]) { const b = new THREE.Mesh(GEO.ico2, cloudMat.clone()); b.scale.setScalar(s); b.position.set(x, y, z); g.add(b); }
+    const hit = new THREE.Mesh(GEO.ball, hitMat); hit.scale.setScalar(0.95); g.add(hit);
+    g.position.set(c0.x + Math.cos(a) * r, 1.3 + (i % 3) * 0.6, c0.z + Math.sin(a) * r * 0.7);
+    scene.add(g);
+    const cl = { mesh: g, hit, gone: false, k: 1, base: g.position.clone(), ph: R(0, 6) };
+    hit.userData.cloud = cl; clouds.push(cl);
+  }
+}
+function puffCloud(cl) {
+  if (cl.gone) return;
+  cl.gone = true; cl.k = 1;
+  tone(700, 0.25, 'sine', 0.15, 0, 1400); tone(300, 0.3, 'triangle', 0.08, 0.02, 120);
+  paintMission();
+  if (clouds.every(c => c.gone)) setTimeout(() => {
+    smogiHurt = 1;
+    const m = cur(); if (m && m.type === 'boss') completeMission();
+  }, 900);
+}
+let smogiHurt = 0;
+function updateClouds(dt, t) {
+  for (const cl of clouds) {
+    if (cl.gone) {
+      if (cl.k > 0) { cl.k -= dt * 1.8; cl.mesh.scale.setScalar(1 + (1 - cl.k) * 0.8); cl.mesh.children.forEach(b => b.material && b.material.opacity !== undefined && (b.material.opacity = Math.max(0, cl.k) * 0.9)); cl.mesh.position.y += dt * 1.5; }
+      else cl.mesh.visible = false;
+      continue;
+    }
+    cl.mesh.position.set(cl.base.x + Math.sin(t * 0.7 + cl.ph) * 0.25, cl.base.y + Math.sin(t * 1.1 + cl.ph) * 0.15, cl.base.z);
+  }
+  // 스모기 앞에 도착하면 대사 → 구름 등장
+  const m = cur();
+  if (m && m.type === 'boss' && !bossReady && !talkOpen && playing && flatDist(boy.group.position, bossStand(m)) < 3.2) {
+    bossReady = true; moveQueue = []; faceTo(bossSpot(m));
+    playLines(m.before || [], () => { spawnClouds(m); paintMission(); say(MSG.bossTip, true, 4000); });
+  }
+}
+
+// 장수풍뎅이 힘겨루기 미니게임 (톡톡톡 응원)
+let sumo = null;
+function openSumo() {
+  const ov = $('#sumo'); ov.classList.remove('hide');
+  const cv = $('#sumoCanvas');
+  if (!sumo) {
+    const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(devicePixelRatio, 2));
+    const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x8a7a5a, 1.8)); const dl = new THREE.DirectionalLight(0xffffff, 2); dl.position.set(2, 4, 5); sc.add(dl);
+    const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50); cam.position.set(0, 1.8, 5.6); cam.lookAt(0, 0.1, 0);
+    const log = cyl(0.45, 0.45, 5.2, 0x7a5434, 10); log.rotation.z = Math.PI / 2; log.position.y = -0.45; sc.add(log);
+    const rh = makeRhino().group; rh.rotation.y = Math.PI / 2; rh.scale.setScalar(1.9); sc.add(rh);
+    const st = makeStag().group; st.rotation.y = -Math.PI / 2; st.scale.setScalar(1.9); sc.add(st);
+    sumo = { r, sc, cam, rh, st };
+  }
+  Object.assign(sumo, { p: 0, t: 0, done: false, taps: 0, push: 0 });
+  $('#sumoBar').style.width = '50%'; $('#sumoTime').textContent = '15';
+  say(MSG.sumoTip, true, 2500);
+}
+$('#sumo').addEventListener('pointerdown', e => {
+  if (!sumo || sumo.done) return;
+  e.preventDefault(); sumo.p = Math.min(1, sumo.p + 0.07); sumo.push = 1; tone(500 + sumo.p * 300, 0.06, 'triangle', 0.1);
+});
+function updateSumo(dt, t) {
+  if (!sumo || $('#sumo').classList.contains('hide')) return;
+  const cv = $('#sumoCanvas'), w = cv.clientWidth, h = cv.clientHeight;
+  if (w && h) { sumo.r.setSize(w, h, false); sumo.cam.aspect = w / h; sumo.cam.updateProjectionMatrix(); }
+  if (!sumo.done) {
+    sumo.t += dt;
+    sumo.p = Math.max(-0.9, sumo.p - dt * (0.16 + 0.06 * Math.sin(sumo.t * 1.7))); // 사슴벌레도 힘껏 민다
+    $('#sumoTime').textContent = Math.max(0, Math.ceil(15 - sumo.t));
+    if (sumo.p >= 1 || sumo.t >= 15) {
+      sumo.done = true; const win = sumo.p >= 1;
+      sfx.chime(); say(win ? MSG.sumoWin : MSG.sumoDraw, true, 2500);
+      setTimeout(() => { $('#sumo').classList.add('hide'); completeMission(); }, 2600);
+    }
+  }
+  sumo.push = Math.max(0, sumo.push - dt * 6);
+  const x = sumo.p * 1.1;
+  sumo.rh.position.set(x - 1.15 - sumo.push * 0.06, 0, 0); sumo.st.position.set(x + 1.15, 0, 0);
+  sumo.rh.rotation.z = Math.sin(t * 20) * 0.02 * (1 + sumo.push);
+  $('#sumoBar').style.width = `${50 + sumo.p * 50}%`;
+  sumo.r.render(sumo.sc, sumo.cam);
+}
 
 // 골디의 공
 const ballMesh = (() => { const g = new THREE.Group(); g.add(ball(0.24, 0xd8f04a, { rough: 0.6 })); const seam = mesh(new THREE.TorusGeometry(0.235, 0.018, 4, 20), mat(0xffffff)); seam.rotation.x = 1.2; g.add(seam); g.visible = false; scene.add(g); return g; })();
@@ -1213,6 +1495,13 @@ function spawnHearts(p) {
     h.userData = { life: 1.6, vy: R(0.6, 1) }; scene.add(h); hearts.push(h);
   }
 }
+// 물보라 고리 (헤엄칠 때)
+const ripples = [];
+const rippleGeo = new THREE.RingGeometry(0.35, 0.45, 20);
+function spawnRipple(p) {
+  const m = new THREE.Mesh(rippleGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.6, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2; m.position.set(p.x, -0.04, p.z); m.renderOrder = 3; scene.add(m); ripples.push({ m, life: 1 });
+}
 
 // ───────── 길찾기: 다른 지역은 길목을 거쳐 간다 ─────────
 const DOOR = { valley: [new V3(0, 0, -26), new V3(0, 0, -45)], beach: [new V3(26, 0, 0), new V3(48, 0, 0)] };
@@ -1226,39 +1515,67 @@ function route(from, to) {
   return pts.map(p => new V3(p.x, 0, p.z));
 }
 
-// ───────── 입력: 톡 = 이동, 친구 꾹 = 관찰 ─────────
+// ───────── 입력 ─────────
+//  손가락을 대고 끌면 그쪽으로 걷는다(조이스틱). 톡 = 그곳으로 걸어가기. 친구를 꾹 = 관찰.
 const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
 const groundPlane = new THREE.Plane(new V3(0, 1, 0), 0);
 let moveQueue = [], pendingCreature = null;
-let ptr = null, hold = null; // hold: {c, t}
-const HOLD_SEC = 1.3;
+let ptr = null, hold = null, joy = null; // joy: {x0, y0, dx, dy}
+const HOLD_SEC = 1.3, JOY_R = 70;
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
 tapMark.rotation.x = -Math.PI / 2; tapMark.renderOrder = 3; scene.add(tapMark);
 
-function blocked() { return !playing || cardOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide'); }
+function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide'); }
 function setNdc(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); }
 function pickCreature() {
   const hits = ray.intersectObjects(creatures.filter(c => c.appear > 0.5).map(c => c.hit), false);
   return hits.length ? hits[0].object.userData.c : null;
 }
+function pickCloud() {
+  const hits = ray.intersectObjects(clouds.filter(c => !c.gone).map(c => c.hit), false);
+  return hits.length ? hits[0].object.userData.cloud : null;
+}
 function flatDist(a, b) { return Math.hypot(a.x - b.x, a.z - b.z); }
 function nearCreature(c) { return flatDist(boy.group.position, c.stand) < 1.3 || flatDist(boy.group.position, c.anchor) < flatDist(c.stand, c.anchor) + 0.6; }
 function isTarget(c) { const m = cur(); return !m || (m.type === 'meet' && m.target === c.id); }
 
-renderer.domElement.addEventListener('pointerdown', e => {
-  if (blocked()) return;
+const cvEl = renderer.domElement;
+cvEl.addEventListener('pointerdown', e => {
+  if (blocked() || ptr) return;
   setNdc(e);
+  const cl = pickCloud();
+  if (cl) { puffCloud(cl); return; }
   const c = pickCreature();
   const dog = !c && ray.intersectObject(goldieHit, false).length > 0;
   ptr = { id: e.pointerId, x: e.clientX, y: e.clientY, t: performance.now(), c, dog };
   if (c && !save.found[c.id] && isTarget(c) && nearCreature(c)) { hold = { c, t: 0 }; moveQueue = []; faceTo(c.anchor); }
 });
+cvEl.addEventListener('pointermove', e => {
+  if (!ptr || e.pointerId !== ptr.id || hold || blocked()) return;
+  const dx = e.clientX - ptr.x, dy = e.clientY - ptr.y, d = Math.hypot(dx, dy);
+  if (!joy && d > 18) { joy = { x0: ptr.x, y0: ptr.y, dx: 0, dy: 0 }; moveQueue = []; pendingCreature = null; const j = $('#joy'); j.style.left = ptr.x + 'px'; j.style.top = ptr.y + 'px'; j.classList.remove('hide'); }
+  if (joy) {
+    const k = Math.min(1, JOY_R / Math.max(d, 1));
+    joy.dx = dx * k; joy.dy = dy * k;
+    $('#joyKnob').style.transform = `translate(${joy.dx}px, ${joy.dy}px)`;
+  }
+});
+// PC 키보드: 방향키·WASD 로 걷기, 스페이스·엔터 = 대화 넘기기
+const keys = new Set();
+const KEYMAP = { ArrowUp: [0, -1], KeyW: [0, -1], ArrowDown: [0, 1], KeyS: [0, 1], ArrowLeft: [-1, 0], KeyA: [-1, 0], ArrowRight: [1, 0], KeyD: [1, 0] };
+addEventListener('keydown', e => {
+  if (KEYMAP[e.code]) { keys.add(e.code); e.preventDefault(); }
+  if ((e.code === 'Space' || e.code === 'Enter') && talkSkip) { e.preventDefault(); talkSkip(); }
+});
+addEventListener('keyup', e => keys.delete(e.code));
+addEventListener('blur', () => keys.clear());
+function keyVec() { let x = 0, z = 0; for (const k of keys) { x += KEYMAP[k][0]; z += KEYMAP[k][1]; } return x || z ? { dx: x * 45, dy: z * 45 } : null; }
 function endPointer(e, cancelled) {
   if (!ptr || e.pointerId !== ptr.id) return;
   const p = ptr; ptr = null;
+  if (joy) { joy = null; $('#joy').classList.add('hide'); $('#joyKnob').style.transform = ''; return; }
   if (hold) { const done = hold.done; hold = null; $('#ring').classList.add('hide'); if (done) return; if (!cancelled && performance.now() - p.t < 400) say(MSG.holdHint, true, 3000); return; }
   if (cancelled || blocked()) return;
-  if (Math.hypot(e.clientX - p.x, e.clientY - p.y) > 25) return;
   setNdc(e);
   if (p.dog) { tapGoldie(); return; }
   if (p.c) {
@@ -1269,8 +1586,8 @@ function endPointer(e, cancelled) {
   const pt = ray.ray.intersectPlane(groundPlane, new V3());
   if (pt) { pendingCreature = null; walkTo(pt); }
 }
-renderer.domElement.addEventListener('pointerup', e => endPointer(e, false));
-renderer.domElement.addEventListener('pointercancel', e => endPointer(e, true));
+cvEl.addEventListener('pointerup', e => endPointer(e, false));
+cvEl.addEventListener('pointercancel', e => endPointer(e, true));
 
 function walkTo(p) {
   moveQueue = route(boy.group.position, p);
@@ -1294,7 +1611,7 @@ function tapGoldie() {
 function throwBall() {
   const fwd = new V3(goldie.group.position.x - boy.group.position.x, 0, goldie.group.position.z - boy.group.position.z).normalize();
   let to = null;
-  for (let d = 7.5; d > 1.5; d -= 1) { const p = boy.group.position.clone().addScaledVector(fwd, d); if (walkable(p.x, p.z)) { to = p; break; } }
+  for (let d = 7.5; d > 1.5; d -= 1) { const p = boy.group.position.clone().addScaledVector(fwd, d); if (walkable(p.x, p.z) && !isWater(p.x, p.z)) { to = p; break; } }
   if (!to) to = goldie.group.position.clone();
   collide(to, 0.4); to.y = 0.25;
   fetchState.step = 'thrown'; fetchState.t = 0; fetchState.from.copy(ballMesh.position); fetchState.to.copy(to);
@@ -1306,8 +1623,8 @@ const gState = { idle: 0, barkCool: 8, wag: 0 };
 function goldieThink(dt) {
   gState.barkCool -= dt; gState.wag = Math.max(0, gState.wag - dt);
   const g = missionGoal();
-  if (g && gState.barkCool < 0 && gState.idle > 7 && flatDist(boy.group.position, g.pos) > 4 && !blocked()) {
-    sfx.bark(); say(MSG.barkCall, true, 3500); gState.barkCool = 14;
+  if (g && gState.barkCool < 0 && gState.idle > 8 && flatDist(boy.group.position, g.pos) > 4 && !blocked()) {
+    sfx.bark(); say(MSG.barkCall, true, 3500); gState.barkCool = 16;
   }
 }
 function goldieGoal() {
@@ -1325,7 +1642,7 @@ function goldieGoal() {
       const dir = new V3(next.x - bp.x, 0, next.z - bp.z).normalize();
       return { p: bp.clone().addScaledVector(dir, Math.min(3.2, Math.max(1.5, flatDist(bp, next)))).add(new V3(dir.z, 0, -dir.x).multiplyScalar(0.8)), stopAt: 0.4, speed: 7, look: next };
     }
-    const dir = new V3(g.pos.x - g.look.x, 0, g.pos.z - g.look.z).normalize();
+    const dir = new V3(g.pos.x - g.look.x, 0, g.pos.z - g.look.z); if (dir.lengthSq() < 0.01) dir.set(0, 0, 1); dir.normalize();
     return { p: g.pos.clone().add(new V3(-dir.z, 0, dir.x).multiplyScalar(1.3)), stopAt: 0.4, speed: 6, look: g.look };
   }
   return { p: bp.clone().add(new V3(1.4, 0, -0.3)), stopAt: 1.0, speed: 7, look: bp };
@@ -1351,10 +1668,10 @@ function updateFetch(dt) {
     const f = new V3(Math.sin(goldie.group.rotation.y), 0, Math.cos(goldie.group.rotation.y));
     ballMesh.position.copy(gp).addScaledVector(f, 0.85).setY(0.85);
     if (flatDist(gp, bp) < 1.7) {
-      fetchState.step = 'done'; ballMesh.visible = false; save.ballDone = true; persist();
+      fetchState.step = 'done'; ballMesh.visible = false; persist();
       spawnHearts(gp.clone().setY(1.3)); gState.wag = 3;
       say(MSG.ballDone, true, 4000);
-      setTimeout(completeMission, 3800);
+      setTimeout(() => completeMission(), 3800);
     }
   }
 }
@@ -1372,6 +1689,32 @@ function turnToward(obj, ang, dt, k = 10) {
 }
 let lockedCool = 0;
 function nearLockedGate(p) { return Object.values(gates).some(g => !g.open && flatDist(p, g.pos) < 7); }
+
+// ───────── 나무 뒤에 숨어도 보이게: 가려지면 노란 실루엣이 비친다 ─────────
+function addXray(group, color, opacity = 0.5) {
+  const m = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, depthFunc: THREE.GreaterDepth, depthWrite: false, fog: false });
+  const list = []; group.traverse(o => { if (o.isMesh && o.material.visible !== false && !o.material.transparent) list.push(o); });
+  const ghosts = [];
+  for (const o of list) { const g = new THREE.Mesh(o.geometry, m); g.renderOrder = 20; g.raycast = () => {}; g.visible = false; o.add(g); ghosts.push(g); }
+  group.userData.ghosts = ghosts;
+  return ghosts;
+}
+function setGhost(group, on) { const gs = group.userData.ghosts; if (gs && gs[0] && gs[0].visible !== on) gs.forEach(g => g.visible = on); }
+const segTmp = new V3();
+function occluded(p) { // 카메라와 p 사이에 나무 잎·줄기가 있나
+  const a = camera.position, ab = segTmp.subVectors(p, a), L = ab.length(); ab.divideScalar(L);
+  for (const o of occluders) {
+    if (Math.abs(o.c.x - p.x) > 16 || Math.abs(o.c.z - p.z) > 16) continue;
+    const t = (o.c.x - a.x) * ab.x + (o.c.y - a.y) * ab.y + (o.c.z - a.z) * ab.z;
+    if (t < 0 || t > L - 0.4) continue;
+    const dx = a.x + ab.x * t - o.c.x, dy = a.y + ab.y * t - o.c.y, dz = a.z + ab.z * t - o.c.z;
+    if (dx * dx + dy * dy + dz * dz < o.r * o.r * 0.8) return true;
+  }
+  return false;
+}
+addXray(boy.group, 0x5b8cff, 0.45);
+for (const c of creatures) addXray(c.made.group, 0xffd23f, 0.6);
+addXray(smogi.group, 0xb08cff, 0.5);
 
 // ───────── 미니맵 (왼쪽 위, 나를 가운데에 두고 위쪽이 화면 안쪽) ─────────
 const mini = $('#mini'), mctx = mini.getContext('2d');
@@ -1392,6 +1735,7 @@ function buildMiniBase() {
   b.fillStyle = '#a7d97f'; b.beginPath(); b.arc(X(0), Z(0), FOREST_R * k, 0, 7); b.fill();
   b.fillStyle = '#5fb3d9'; b.beginPath(); b.arc(X(SPOT.pond.x), Z(SPOT.pond.z), 3.2 * k, 0, 7); b.fill();
   b.beginPath(); b.arc(X(SPOT.pool.x), Z(SPOT.pool.z), 2 * k, 0, 7); b.fill();
+  b.fillStyle = '#8a8f88'; b.beginPath(); b.arc(X(SPOT.seaBoss.x), Z(SPOT.seaBoss.z), 1.8 * k, 0, 7); b.fill();
   b.fillStyle = '#8a5a2b'; b.fillRect(X(SPOT.log.x - 0.5), Z(SPOT.log.z - 1.3), k, 2.6 * k);
   for (const c of colliders) {
     if (c.r > 1.5 || !walkable(c.x, c.z + 0.01) && Math.hypot(c.x, c.z) > FOREST_R) continue;
@@ -1411,12 +1755,12 @@ function drawMini(t) {
   mctx.drawImage(miniBase, (bp.x - MV - MB.x0) * MB.ppu, (bp.z - MV - MB.z0) * MB.ppu, MV * 2 * MB.ppu, MV * 2 * MB.ppu, h - MV * s, h - MV * s, MV * 2 * s, MV * 2 * s);
   if (nightK > 0.01) { mctx.fillStyle = `rgba(20,30,70,${nightK * 0.45})`; mctx.fillRect(0, 0, miniSize, miniSize); }
   mctx.textAlign = 'center'; mctx.textBaseline = 'middle';
-  // 잠긴 길
   mctx.font = `${Math.round(miniSize * 0.12)}px sans-serif`;
   for (const g of Object.values(gates)) if (!g.open) { const [x, y] = M(g.pos.x, g.pos.z); mctx.fillText('🔒', x, y); }
-  // 만난 친구들
+  if (villain.state !== 'off') { const [x, y] = M(villain.pos.x, villain.pos.z); mctx.fillText('😈', x, y); }
   mctx.font = `${Math.round(miniSize * 0.1)}px sans-serif`;
   for (const c of creatures) if (save.found[c.id] && c.appear > 0.5) { const [x, y] = M(c.anchor.x, c.anchor.z); mctx.fillText(c.def.emoji, x, y); }
+  for (const it of items) if (!it.got) { const [x, y] = M(it.pos.x, it.pos.z); mctx.fillStyle = '#ffd23f'; mctx.beginPath(); mctx.arc(x, y, miniSize * 0.025, 0, 7); mctx.fill(); }
   // 미션 목표: 미니맵 밖이면 가장자리에 붙여 방향을 알려 준다
   const goal = missionGoal();
   if (goal) {
@@ -1428,10 +1772,8 @@ function drawMini(t) {
     mctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; mctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
     mctx.closePath(); mctx.fill(); mctx.stroke();
   }
-  // 골디 (주황 점)
   const [gx, gy] = M(goldie.group.position.x, goldie.group.position.z);
   mctx.fillStyle = '#e2a554'; mctx.strokeStyle = '#fff'; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(gx, gy, miniSize * 0.03, 0, 7); mctx.fill(); mctx.stroke();
-  // 나 (파란 화살표, 늘 가운데)
   const a = boy.group.rotation.y, sz = miniSize * 0.055;
   mctx.save(); mctx.translate(h, h); mctx.rotate(-a + Math.PI);
   mctx.fillStyle = '#2f6fe0'; mctx.strokeStyle = '#fff'; mctx.lineWidth = 2;
@@ -1442,10 +1784,21 @@ function drawMini(t) {
 
 // ───────── 메인 루프 ─────────
 const UP = new V3(0, 1, 0);
-let detour = 0, detourSide = 1, stuck = 0, region = 'forest';
+let detour = 0, detourSide = 1, stuck = 0, region = 'forest', swimPh = 0, rippleCool = 0;
 let playing = false, cheer = 0, walkPh = 0, gWalkPh = 0, cicadaCool = 3;
 const clock = new THREE.Clock();
 const tmpV = new V3();
+// 한 걸음: dir 방향(정규화)으로 step 만큼. 막히면 false
+function stepMove(p, dir, step, r) {
+  const before = p.clone();
+  p.addScaledVector(dir, step); collide(p, r);
+  if (!walkable(p.x, p.z)) { // 가장자리에선 미끄러지듯 따라간다
+    p.copy(before);
+    const sx = before.clone(); sx.x += dir.x * step; if (walkable(sx.x, sx.z)) p.copy(sx);
+    else { const sz = before.clone(); sz.z += dir.z * step; if (walkable(sz.x, sz.z)) p.copy(sz); }
+  }
+  return flatDist(p, before) >= step * 0.35;
+}
 function frame() {
   requestAnimationFrame(frame);
   const dt = Math.min(clock.getDelta(), 0.05), t = clock.elapsedTime;
@@ -1457,22 +1810,32 @@ function frame() {
   // 길막이 내려가기
   for (const g of Object.values(gates)) if (g.opening) { g.k = Math.max(0, g.k - dt / 1.8); g.mesh.position.y = (g.k - 1) * 2.2; if (g.k <= 0) { g.opening = false; g.mesh.visible = false; } }
 
-  // 주인공 이동 (길목을 차례로)
+  // 주인공 이동: 끌기(조이스틱) 또는 톡 한 곳까지
+  const inWater = isWater(bp.x, bp.z);
+  const speed = inWater ? 3.8 : 5.5;
   let moving = false;
   lockedCool -= dt;
-  if (moveQueue.length && playing) {
+  const kv = keyVec(); if (kv) { moveQueue = []; pendingCreature = null; }
+  const stick = joy || kv;
+  if (stick && playing && !blocked()) {
+    const len = Math.hypot(stick.dx, stick.dy);
+    if (len > 8) {
+      const dir = new V3(stick.dx, 0, stick.dy).normalize();
+      const ok = stepMove(bp, dir, speed * Math.min(1, len / 45) * dt, 0.4);
+      faceAngle = Math.atan2(dir.x, dir.z); moving = true;
+      if (!ok && nearLockedGate(bp) && lockedCool < 0) { say(MSG.locked, true, 3500); lockedCool = 6; }
+    }
+  } else if (moveQueue.length && playing) {
     const target = moveQueue[0];
     tmpV.subVectors(target, bp).setY(0);
     const d = tmpV.length();
     if (d > (moveQueue.length > 1 ? 0.8 : 0.12)) {
-      const step = Math.min(d, 5.5 * dt); tmpV.normalize();
+      const step = Math.min(d, speed * dt); tmpV.normalize();
       if (detour > 0) { detour -= dt; tmpV.applyAxisAngle(UP, detourSide * 1.1); }
-      const before = bp.clone();
-      bp.addScaledVector(tmpV, step); collide(bp, 0.4);
-      if (!walkable(bp.x, bp.z)) { bp.x = before.x; bp.z = before.z; }
+      const ok = stepMove(bp, tmpV, step, 0.4);
       faceAngle = Math.atan2(tmpV.x, tmpV.z); moving = true;
       // 나무에 막히면 옆으로 비켜 돌아간다, 오래 막히면 멈춤
-      if (flatDist(bp, before) < step * 0.35) {
+      if (!ok) {
         stuck += dt; if (detour <= 0) { detour = 0.45; detourSide = -detourSide; }
         if (stuck > 2.2) { moveQueue = []; stuck = 0; pendingCreature = null; if (nearLockedGate(bp) && lockedCool < 0) { say(MSG.locked, true, 3500); lockedCool = 6; } }
       } else stuck = Math.max(0, stuck - dt);
@@ -1483,24 +1846,35 @@ function frame() {
     }
   }
   // 가만히 있으면 화면 쪽을 돌아본다 (얼굴 보이게)
-  if (!moving && !hold && gState.idle > 2.5 && !pendingCreature) turnToward(boy.group, 0, dt, 2.5);
+  if (!moving && !hold && gState.idle > 2.5 && !pendingCreature && !inWater) turnToward(boy.group, 0, dt, 2.5);
   else turnToward(boy.group, faceAngle, dt);
   gState.idle = moving || hold ? 0 : gState.idle + dt;
 
-  // 지역에 들어서면 알려 준다
+  // 지역에 들어서면 알려 준다 / 물에 처음 들어가면 알려 준다
   const rNow = regionAt(bp.x, bp.z);
   if (rNow !== region && playing) { region = rNow; if (!blocked()) say(REGIONS[region].enter, true, 3000); }
+  if (inWater && !save.swimTold && playing && !blocked()) { save.swimTold = true; persist(); say(MSG.swim, true, 3000); sfx.splash(); }
+  updateSat();
 
-  // 주인공 몸짓
-  walkPh += dt * (moving ? 11 : 0);
-  const sw = moving ? Math.sin(walkPh) : 0;
-  boy.legs[0].rotation.x = sw * 0.6; boy.legs[1].rotation.x = -sw * 0.6;
-  boy.arms[0].rotation.x = -sw * 0.5; boy.arms[1].rotation.x = sw * 0.5;
-  let by = moving ? Math.abs(Math.sin(walkPh)) * 0.06 : Math.sin(t * 2) * 0.01;
-  if (cheer > 0) { cheer = Math.max(0, cheer - dt * 1.2); by += Math.sin((1 - cheer) * Math.PI * 2) ** 2 * 0.35 * cheer; boy.arms.forEach(a => a.rotation.x = -2.6 * cheer); }
-  boy.group.position.y = by;
-  boy.head.rotation.x = hold ? 0.25 : 0;
+  // 주인공 몸짓 (걷기 / 헤엄)
+  const sw = moving ? 1 : 0;
+  if (inWater) {
+    swimPh += dt * (moving ? 7 : 2.5);
+    boy.arms[0].rotation.x = -1.6 + Math.sin(swimPh) * 1.4; boy.arms[1].rotation.x = -1.6 - Math.sin(swimPh) * 1.4;
+    boy.legs[0].rotation.x = Math.sin(swimPh * 2) * 0.4; boy.legs[1].rotation.x = -Math.sin(swimPh * 2) * 0.4;
+    rippleCool -= dt; if (rippleCool < 0) { spawnRipple(bp); rippleCool = moving ? 0.35 : 1.1; }
+  } else {
+    walkPh += dt * (moving ? 11 : 0);
+    const s1 = moving ? Math.sin(walkPh) : 0;
+    boy.legs[0].rotation.x = s1 * 0.6; boy.legs[1].rotation.x = -s1 * 0.6;
+    boy.arms[0].rotation.x = -s1 * 0.5; boy.arms[1].rotation.x = s1 * 0.5;
+  }
+  let by = inWater ? -0.62 + Math.sin(t * 2) * 0.04 : (moving ? Math.abs(Math.sin(walkPh)) * 0.06 : Math.sin(t * 2) * 0.01);
+  if (cheer > 0 && !inWater) { cheer = Math.max(0, cheer - dt * 1.2); by += Math.sin((1 - cheer) * Math.PI * 2) ** 2 * 0.35 * cheer; boy.arms.forEach(a => a.rotation.x = -2.6 * cheer); }
+  boy.group.position.y += (by - boy.group.position.y) * Math.min(1, dt * 8);
+  boy.head.rotation.x = hold ? 0.25 : (inWater ? -0.2 : 0);
   boy.group.scale.y = hold ? 0.9 : 1; // 살금살금 웅크리기
+  void sw;
 
   // 꾹 관찰
   if (hold && !hold.done) {
@@ -1519,10 +1893,10 @@ function frame() {
   tmpV.subVectors(gg.p, gp).setY(0);
   const gd = tmpV.length();
   let gMoving = false;
+  const gWater = isWater(gp.x, gp.z);
   if (gd > gg.stopAt) {
-    const before = gp.clone();
-    const sp = Math.min(gg.speed, 2 + gd * 2.2) * dt; tmpV.normalize(); gp.addScaledVector(tmpV, Math.min(sp, gd)); collide(gp, 0.45);
-    if (!walkable(gp.x, gp.z) && walkable(before.x, before.z)) { gp.x = before.x; gp.z = before.z; }
+    const sp = Math.min(gg.speed * (gWater ? 0.75 : 1), 2 + gd * 2.2) * dt; tmpV.normalize();
+    const gy = gp.y; stepMove(gp, tmpV, Math.min(sp, gd), 0.45); gp.y = gy;
     if (gd > 14) gp.copy(bp).add(new V3(1.4, 0, 0.6)); // 너무 멀어지면 옆으로 데려온다
     turnToward(goldie.group, Math.atan2(tmpV.x, tmpV.z), dt, 8); gMoving = true;
   } else {
@@ -1533,9 +1907,11 @@ function frame() {
   goldie.tail.rotation.y = Math.sin(t * (gState.wag > 0 ? 18 : 8)) * 0.6;
   goldie.head.rotation.z = gMoving ? 0 : Math.sin(t * 1.3) * 0.12;
   goldie.ears.forEach((e, i) => e.rotation.x = gMoving ? Math.sin(gWalkPh + i) * 0.25 : 0);
-  gp.y = gMoving ? Math.abs(Math.sin(gWalkPh)) * 0.05 : 0;
+  const gyT = gWater ? -0.55 : (gMoving ? Math.abs(Math.sin(gWalkPh)) * 0.05 : 0);
+  gp.y += (gyT - gp.y) * Math.min(1, dt * 8);
 
   // 친구들
+  const tgt = cur() && cur().type === 'meet' ? byId(cur().target) : null;
   for (const c of creatures) {
     const want = c.def.time === 'night' ? nightK : 1;
     c.appear += (want - c.appear) * Math.min(1, dt * 2);
@@ -1547,8 +1923,38 @@ function frame() {
     c.star.visible = show;
     if (show) { c.holder.getWorldPosition(c.star.position); c.star.position.y = Math.max(c.star.position.y, 0) + 0.85 + Math.sin(t * 2 + c.anchor.x) * 0.1; c.star.rotation.y = t * 1.2; }
   }
+  // 나무 뒤에 숨은 미션 친구·주인공은 실루엣으로 비친다
+  if (tgt) setGhost(tgt.made.group, tgt.appear > 0.6 && occluded(tgt.holder.getWorldPosition(tmpV.clone())));
+  for (const c of creatures) if (c !== tgt) setGhost(c.made.group, false);
+  setGhost(boy.group, occluded(bp.clone().setY(bp.y + 1)));
   goldieStar.visible = !!(playing && cur() && cur().type === 'fetch' && fetchState.step === 'carry');
   if (goldieStar.visible) { goldieStar.position.copy(gp).setY(1.9 + Math.sin(t * 2) * 0.1); goldieStar.rotation.y = t * 1.2; }
+
+  // 미니게임·스모기
+  updateItems(dt, t); updateClouds(dt, t); updateSumo(dt, t);
+  if (villain.state !== 'off') {
+    const v = villain, sg = smogi.group;
+    if (v.state === 'come') { v.k = Math.min(1, v.k + dt / 1.2); if (v.k >= 1) v.state = 'here'; }
+    if (v.state === 'leave') { v.k = Math.max(0, v.k - dt / 1.5); if (v.k <= 0) { v.state = 'off'; sg.visible = false; } }
+    const e = v.k * v.k * (3 - 2 * v.k);
+    sg.position.set(v.pos.x, 2.6 + (1 - e) * 9 + Math.sin(t * 1.6) * 0.18, v.pos.z);
+    sg.scale.setScalar(0.4 + e * 0.6);
+    sg.rotation.y = Math.atan2(bp.x - v.pos.x, bp.z - v.pos.z);
+    smogi.wand.rotation.z = Math.sin(t * 3) * 0.3;
+    if (smogiHurt > 0) { smogiHurt = Math.max(0, smogiHurt - dt * 0.6); smogi.body.rotation.z = Math.sin(t * 18) * 0.12 * smogiHurt; } else smogi.body.rotation.z = 0;
+    const kind = cur() && cur().ch === 'ch3' && step === MISSIONS.length - 1 && smogiHurt < 0.5 && clouds.length && clouds.every(c => c.gone);
+    smogi.brows.forEach(({ b, s }) => b.rotation.z = (kind ? 0.35 : -0.45) * s);
+    setGhost(sg, occluded(sg.position));
+  }
+  // 대화가 끝나고 할 일이 없으면 스모기는 날아간다
+  if (villain.state === 'here' && !talkOpen && cur() && cur().type !== 'boss') villainLeave();
+  if (stormShow > 0) { storm.visible = true; storm.position.set(bp.x + 6, 22, bp.z - 45); storm.scale.setScalar(Math.min(1, (storm.scale.x || 0.01) + dt * 0.4)); }
+  else if (storm.visible) { storm.scale.multiplyScalar(1 - dt * 1.5); if (storm.scale.x < 0.05) storm.visible = false; }
+
+  // 매미 소리: 가까이 가면 가끔 맴맴
+  cicadaCool -= dt;
+  const cic = byId('cicada');
+  if (playing && cicadaCool < 0 && flatDist(bp, cic.anchor) < 11 && nightK < 0.5) { sfx.cicada(); cic.buzzing = 0.9; cicadaCool = R(4, 7); }
 
   // 길안내: 발밑 화살표(다음 길목 쪽) + 목표 빛기둥
   const goal = blocked() ? null : missionGoal();
@@ -1557,22 +1963,21 @@ function frame() {
   if (arrow.visible) {
     const next = route(bp, goal.pos)[0];
     const ang = Math.atan2(next.x - bp.x, next.z - bp.z);
-    arrow.position.set(bp.x + Math.sin(ang) * 1.5, 0.06, bp.z + Math.cos(ang) * 1.5);
+    arrow.position.set(bp.x + Math.sin(ang) * 1.5, inWater ? 0.02 : 0.06, bp.z + Math.cos(ang) * 1.5);
     arrow.rotation.y = ang; arrow.material.opacity = 0.6 + 0.25 * Math.sin(t * 2.5);
   }
   beacon.visible = !!goal && gdist > 2.5;
   if (beacon.visible) { beacon.position.set(goal.look.x, 6, goal.look.z); beacon.material.opacity = 0.16 + 0.07 * Math.sin(t * 1.5); }
 
-  // 매미 소리: 가까이 가면 가끔 맴맴
-  cicadaCool -= dt;
-  const cic = byId('cicada');
-  if (playing && cicadaCool < 0 && flatDist(bp, cic.anchor) < 11 && nightK < 0.5) { sfx.cicada(); cic.buzzing = 0.9; cicadaCool = R(4, 7); }
-
-  // 하트·탭 표시·반딧불이·물결·갈매기·폭포
+  // 하트·물보라·탭 표시·반딧불이·물결·갈매기·폭포
   for (let i = hearts.length - 1; i >= 0; i--) {
     const hh = hearts[i]; hh.userData.life -= dt; hh.position.y += hh.userData.vy * dt; hh.rotation.y += dt * 2;
     hh.material.opacity = Math.min(1, hh.userData.life);
     if (hh.userData.life <= 0) { scene.remove(hh); hh.material.dispose(); hearts.splice(i, 1); }
+  }
+  for (let i = ripples.length - 1; i >= 0; i--) {
+    const r = ripples[i]; r.life -= dt * 0.9; r.m.scale.setScalar(1 + (1 - r.life) * 2.2); r.m.material.opacity = Math.max(0, r.life) * 0.5;
+    if (r.life <= 0) { scene.remove(r.m); r.m.material.dispose(); ripples.splice(i, 1); }
   }
   if (tapMark.material.opacity > 0) { tapMark.material.opacity = Math.max(0, tapMark.material.opacity - dt * 1.5); tapMark.scale.multiplyScalar(1 + dt * 0.8); }
   for (const f of fireflies) {
@@ -1588,7 +1993,7 @@ function frame() {
 
   // 카메라·그림자 따라가기
   const off = CAM_OFF.clone().multiplyScalar(camDist);
-  camera.position.lerp(tmpV.copy(bp).add(off), Math.min(1, dt * 4));
+  camera.position.lerp(tmpV.copy(bp).setY(0).add(off), Math.min(1, dt * 4));
   camera.lookAt(camera.position.x - off.x, 1.6, camera.position.z - off.z - camAhead);
   sun.position.set(bp.x + 12, 22, bp.z + 8); sun.target.position.set(bp.x, 0, bp.z);
 
@@ -1611,7 +2016,7 @@ $('#startBtn').onclick = () => {
     setTimeout(() => { sfx.bark(); say(MSG.dogComing, true, 2200); }, 400);
     setTimeout(() => { save.found.goldie = true; persist(); sfx.chime(); cardBookId = 'goldie'; openCard('goldie', true, null); }, 2600);
   } else if (save.done) say(MSG.backDone);
-  else { speak(MSG.back); setTimeout(() => startMission(true), 2600); }
+  else { speak(MSG.back); setTimeout(() => startMission(), 2600); }
 };
 // 부모용 설정: 톱니를 1초 꾹
 let gearT = 0;
@@ -1628,4 +2033,4 @@ $('#setReset').onclick = () => { if (confirm('도감과 진행을 모두 지우�
 $('#setClose').onclick = () => $('#settings').classList.add('hide');
 
 // 시험용 (부모 확인)
-window.__game = { cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission };
+window.__game = { cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };

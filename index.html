@@ -19,6 +19,7 @@
   <div class="left">
     <canvas id="mini"></canvas>
     <div id="lvl" class="pill"><span id="lvlText">탐험가 Lv.1</span><span id="stars"></span></div>
+    <div id="gems" class="pill"></div>
   </div>
   <div class="right">
     <button id="timeBtn" class="round" hidden>🌙</button>
@@ -33,6 +34,26 @@
   <span class="mBody"><span id="mStep">미션 1/6</span><span id="mText"></span></span>
   <span class="mGo">👣<small>데려다줘</small></span>
 </button>
+
+<!-- 이야기 말상자 (톡 하면 다음) -->
+<div id="talk" class="hide">
+  <div id="talkIcon">📖</div>
+  <div class="talkBody"><div id="talkName"></div><div id="talkText"></div></div>
+  <div class="talkNext">▶</div>
+</div>
+
+<!-- 끌어서 걷기 조이스틱 -->
+<div id="joy" class="hide"><div id="joyKnob"></div></div>
+
+<!-- 장수풍뎅이 힘겨루기 -->
+<div id="sumo" class="overlay hide">
+  <div class="panel sumoPanel">
+    <h2>💪 힘겨루기! <span id="sumoTime">15</span></h2>
+    <canvas id="sumoCanvas"></canvas>
+    <div class="sumoBarWrap"><div id="sumoBar"></div></div>
+    <p>🪲 장수풍뎅이를 응원해요! 아무 데나 <b>톡톡톡</b></p>
+  </div>
+</div>
 
 <!-- 골디 말풍선 -->
 <div id="msg" class="hide"><span class="who">🐶</span><span id="msgText"></span></div>

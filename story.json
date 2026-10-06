@@ -1,114 +1,581 @@
 {
   "friends": [
-    { "id": "goldie", "name": "골든 리트리버", "nick": "골디", "emoji": "🐕", "time": "any", "region": "forest", "companion": true,
+    {
+      "id": "goldie",
+      "name": "골든 리트리버",
+      "nick": "골디",
+      "emoji": "🐕",
+      "time": "any",
+      "region": "forest",
+      "companion": true,
       "intro": "안녕! 나는 골디야. 골든 리트리버란다.",
       "facts": [
         "털이 황금빛이라서 골든 리트리버라고 불러요.",
         "옛날엔 사냥꾼이 맞힌 새를 물어 오는 일을 했어요. 그래서 물어 오기 놀이와 수영을 좋아해요.",
         "사람을 잘 따르고 순해서 시각장애인 안내견으로도 일해요."
-      ] },
-    { "id": "squirrel", "name": "다람쥐", "emoji": "🐿️", "time": "day", "region": "forest",
-      "intro": "다람쥐를 만났어요!", "arrive": "다람쥐가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "squirrel",
+      "name": "다람쥐",
+      "emoji": "🐿️",
+      "time": "day",
+      "region": "forest",
+      "intro": "다람쥐를 만났어요!",
+      "arrive": "다람쥐가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "등에 검은 줄무늬가 다섯 줄 있어요.",
         "볼주머니에 도토리를 가득 넣어서 옮겨요.",
         "가을에 먹이를 모아 두었다가 땅굴에서 겨울잠을 자요."
-      ] },
-    { "id": "cicada", "name": "매미", "emoji": "🦗", "time": "day", "region": "forest",
-      "intro": "매미를 만났어요!", "arrive": "매미가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "cicada",
+      "name": "매미",
+      "emoji": "🦗",
+      "time": "day",
+      "region": "forest",
+      "intro": "매미를 만났어요!",
+      "arrive": "매미가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "맴맴 우는 건 수컷이에요. 배에 있는 얇은 막을 떨어서 소리를 내요.",
         "빨대 같은 뾰족한 입으로 나무 수액을 빨아 먹어요.",
         "애벌레는 땅속에서 몇 년이나 살다가 나와서 허물을 벗어요."
-      ] },
-    { "id": "ladybug", "name": "무당벌레", "emoji": "🐞", "time": "day", "region": "forest",
-      "intro": "무당벌레를 만났어요!", "arrive": "무당벌레가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "ladybug",
+      "name": "무당벌레",
+      "emoji": "🐞",
+      "time": "day",
+      "region": "forest",
+      "intro": "무당벌레를 만났어요!",
+      "arrive": "무당벌레가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "진딧물을 잡아먹어서 식물을 지켜 주는 고마운 곤충이에요.",
         "위험하면 다리 마디에서 쓴 노란 물을 내서 몸을 지켜요.",
         "종류마다 점 개수가 달라요. 칠성무당벌레는 점이 일곱 개예요."
-      ] },
-    { "id": "rhino", "name": "장수풍뎅이", "emoji": "🪲", "time": "night", "region": "forest",
-      "intro": "장수풍뎅이를 만났어요!", "arrive": "장수풍뎅이가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "rhino",
+      "name": "장수풍뎅이",
+      "emoji": "🪲",
+      "time": "night",
+      "region": "forest",
+      "intro": "장수풍뎅이를 만났어요!",
+      "arrive": "장수풍뎅이가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "머리에 큰 뿔이 있는 건 수컷이에요. 암컷은 뿔이 없어요.",
         "밤에 나와서 참나무 수액을 먹어요.",
         "애벌레는 썩은 나무 부스러기와 낙엽이 섞인 흙 속에서 자라요."
-      ] },
-    { "id": "stag", "name": "사슴벌레", "emoji": "🪲", "time": "night", "region": "forest",
-      "intro": "사슴벌레를 만났어요!", "arrive": "사슴벌레가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "stag",
+      "name": "사슴벌레",
+      "emoji": "🪲",
+      "time": "night",
+      "region": "forest",
+      "intro": "사슴벌레를 만났어요!",
+      "arrive": "사슴벌레가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "수컷의 큰 턱이 사슴뿔을 닮아서 사슴벌레라고 불러요.",
         "밤에 나와서 나무 수액을 먹어요. 큰 턱으로 다른 수컷과 힘겨루기를 해요.",
         "애벌레는 썩은 나무 속을 파먹으며 자라요."
-      ] },
-    { "id": "minnow", "name": "버들치", "emoji": "🐟", "time": "day", "region": "valley",
-      "intro": "버들치를 만났어요!", "arrive": "버들치가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "minnow",
+      "name": "버들치",
+      "emoji": "🐟",
+      "time": "day",
+      "region": "valley",
+      "intro": "버들치를 만났어요!",
+      "arrive": "버들치가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "아주 맑고 차가운 물에서만 살아요. 버들치가 산다면 물이 깨끗하다는 뜻이에요.",
         "여러 마리가 무리 지어 헤엄쳐요.",
         "물에 떨어진 작은 벌레나 물풀을 먹어요."
-      ] },
-    { "id": "crayfish", "name": "가재", "emoji": "🦞", "time": "day", "region": "valley",
-      "intro": "가재를 만났어요!", "arrive": "가재가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "crayfish",
+      "name": "가재",
+      "emoji": "🦞",
+      "time": "day",
+      "region": "valley",
+      "intro": "가재를 만났어요!",
+      "arrive": "가재가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "맑은 계곡의 돌 밑에 숨어 살아요.",
         "위험하면 꼬리를 접었다 폈다 하면서 뒤로 쌩 도망쳐요.",
         "다리가 떨어져도 허물을 벗으면서 새 다리가 다시 자라요."
-      ] },
-    { "id": "kingfisher", "name": "물총새", "emoji": "🐦", "time": "day", "region": "valley",
-      "intro": "물총새를 만났어요!", "arrive": "물총새가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "kingfisher",
+      "name": "물총새",
+      "emoji": "🐦",
+      "time": "day",
+      "region": "valley",
+      "intro": "물총새를 만났어요!",
+      "arrive": "물총새가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "등은 반짝이는 파란색, 배는 주황색이에요.",
         "물가 나뭇가지에 앉아 있다가 물속으로 쏜살같이 뛰어들어 물고기를 잡아요.",
         "물가 흙 벽에 굴을 파서 둥지를 만들어요."
-      ] },
-    { "id": "crab", "name": "꽃게", "emoji": "🦀", "time": "day", "region": "beach",
-      "intro": "꽃게를 만났어요!", "arrive": "꽃게가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "crab",
+      "name": "꽃게",
+      "emoji": "🦀",
+      "time": "day",
+      "region": "beach",
+      "intro": "꽃게를 만났어요!",
+      "arrive": "꽃게가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "맨 뒷다리가 노처럼 납작해서 바닷속에서 헤엄을 잘 쳐요.",
         "옆으로 걸어 다녀요.",
         "커다란 집게발로 먹이를 잡고 몸을 지켜요."
-      ] },
-    { "id": "hermit", "name": "소라게", "emoji": "🐚", "time": "day", "region": "beach",
-      "intro": "소라게를 만났어요!", "arrive": "소라게가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "hermit",
+      "name": "소라게",
+      "emoji": "🐚",
+      "time": "day",
+      "region": "beach",
+      "intro": "소라게를 만났어요!",
+      "arrive": "소라게가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "빈 고둥 껍데기를 집으로 삼아 등에 지고 다녀요.",
         "몸이 커지면 더 큰 껍데기를 찾아 이사해요.",
         "놀라면 껍데기 속으로 쏙 숨어요."
-      ] },
-    { "id": "starfish", "name": "불가사리", "emoji": "⭐", "time": "day", "region": "beach",
-      "intro": "불가사리를 만났어요!", "arrive": "불가사리가 있어요! 꾹 눌러서 관찰해요.",
+      ]
+    },
+    {
+      "id": "starfish",
+      "name": "불가사리",
+      "emoji": "⭐",
+      "time": "day",
+      "region": "beach",
+      "intro": "불가사리를 만났어요!",
+      "arrive": "불가사리가 있어요! 꾹 눌러서 관찰해요.",
       "facts": [
         "팔이 떨어져도 다시 자라나요.",
         "팔 아래에 아주 작은 발이 잔뜩 있어서 천천히 기어가요.",
         "조개를 먹을 때는 위를 몸 밖으로 내밀어서 먹어요."
-      ] }
+      ]
+    }
   ],
   "regions": {
-    "forest": { "name": "숲", "icon": "🌳", "enter": "숲속에 왔어요!" },
-    "valley": { "name": "계곡", "icon": "🏞️", "enter": "맑은 계곡에 왔어요! 물소리가 들려요." },
-    "beach": { "name": "바닷가", "icon": "🏖️", "enter": "바닷가에 왔어요! 파도 소리가 들려요." }
+    "forest": {
+      "name": "숲",
+      "icon": "🌳",
+      "enter": "숲속에 왔어요!"
+    },
+    "valley": {
+      "name": "계곡",
+      "icon": "🏞️",
+      "enter": "맑은 계곡에 왔어요! 물소리가 들려요."
+    },
+    "beach": {
+      "name": "바닷가",
+      "icon": "🏖️",
+      "enter": "바닷가에 왔어요! 파도 소리가 들려요."
+    }
   },
   "missions": [
-    { "type": "meet", "target": "squirrel", "icon": "🐿️", "text": "통나무 위 다람쥐를 찾아요" },
-    { "type": "meet", "target": "cicada", "icon": "🦗", "text": "맴맴 우는 매미를 찾아요" },
-    { "type": "meet", "target": "ladybug", "icon": "🐞", "text": "꽃 덤불의 무당벌레를 찾아요" },
-    { "type": "fetch", "icon": "🎾", "text": "골디의 공을 찾아 주세요", "announce": "골디가 공을 잃어버렸대요. 공을 찾아 주세요!" },
-    { "type": "meet", "target": "rhino", "icon": "🪲", "text": "참나무 수액의 장수풍뎅이를 찾아요" },
-    { "type": "meet", "target": "stag", "icon": "🪲", "text": "같은 나무의 사슴벌레를 찾아요" },
-    { "type": "meet", "target": "minnow", "icon": "🐟", "text": "계곡물 속 버들치를 찾아요", "opens": "valley",
-      "announce": "아침이 밝았어요! 숲 위쪽 계곡 길이 열렸어요. 계곡물 속 버들치를 찾아요!" },
-    { "type": "meet", "target": "crayfish", "icon": "🦞", "text": "돌 밑에 숨은 가재를 찾아요" },
-    { "type": "meet", "target": "kingfisher", "icon": "🐦", "text": "나뭇가지 위 물총새를 찾아요" },
-    { "type": "meet", "target": "crab", "icon": "🦀", "text": "바닷가의 꽃게를 찾아요", "opens": "beach",
-      "announce": "숲 오른쪽 바닷가 길이 열렸어요! 바닷가의 꽃게를 찾아요!" },
-    { "type": "meet", "target": "hermit", "icon": "🐚", "text": "껍데기를 지고 다니는 소라게를 찾아요" },
-    { "type": "meet", "target": "starfish", "icon": "⭐", "text": "바위 웅덩이의 불가사리를 찾아요" }
+    {
+      "ch": "ch1",
+      "type": "talk",
+      "icon": "😈",
+      "text": "숲에 무슨 일이?",
+      "lines": [
+        {
+          "who": "narr",
+          "text": "그때, 하늘에서 회색 연기가 뭉게뭉게 내려왔어요."
+        },
+        {
+          "who": "smogi",
+          "text": "히히히! 나는 잿빛 마법사 스모기다!"
+        },
+        {
+          "who": "smogi",
+          "text": "숲의 초록 구슬은 이제 내 거야. 숲아, 잿빛으로 변해라!"
+        },
+        {
+          "who": "goldie",
+          "text": "멍멍! 큰일이야! 숲이 회색으로 변하고 있어!"
+        },
+        {
+          "who": "goldie",
+          "text": "숲 친구들을 도와주면 숲이 다시 초록색이 될 거야. 같이 가자!"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "meet",
+      "target": "squirrel",
+      "icon": "🐿️",
+      "text": "통나무 위 다람쥐를 찾아요",
+      "after": [
+        {
+          "who": "squirrel",
+          "text": "스모기가 내 도토리를 다 흩어 놓고 갔어. 같이 주워 줄래?"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "collect",
+      "item": "acorn",
+      "icon": "🌰",
+      "text": "흩어진 도토리를 주워요",
+      "announce": "흩어진 도토리 다섯 개를 주워요! 걸어가면 저절로 주워져요.",
+      "after": [
+        {
+          "who": "squirrel",
+          "text": "고마워! 스모기는 맴맴 소리 나는 나무 쪽으로 날아갔어."
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "meet",
+      "target": "cicada",
+      "icon": "🦗",
+      "text": "맴맴 우는 매미를 찾아요",
+      "after": [
+        {
+          "who": "cicada",
+          "text": "스모기 연기 때문에 목이 칼칼해. 꽃 덤불의 무당벌레가 스모기를 봤대!"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "meet",
+      "target": "ladybug",
+      "icon": "🐞",
+      "text": "꽃 덤불의 무당벌레를 찾아요",
+      "after": [
+        {
+          "who": "ladybug",
+          "text": "스모기가 골디의 공을 숨겼어! 서쪽 풀숲으로 갔어."
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "fetch",
+      "icon": "🎾",
+      "text": "골디의 공을 찾아 주세요",
+      "announce": "스모기가 숨긴 골디의 공을 찾아 주세요!",
+      "reward": "flashlight",
+      "after": [
+        {
+          "who": "goldie",
+          "text": "고마워! 그런데 벌써 해가 지고 있어. 스모기는 밤에 큰 참나무로 간대!"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "meet",
+      "target": "rhino",
+      "icon": "🪲",
+      "text": "참나무 수액의 장수풍뎅이를 찾아요",
+      "night": true,
+      "after": [
+        {
+          "who": "rhino",
+          "text": "스모기가 수액 식당을 연기로 덮으려고 해!"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "meet",
+      "target": "stag",
+      "icon": "🪲",
+      "text": "같은 나무의 사슴벌레를 찾아요",
+      "night": true,
+      "after": [
+        {
+          "who": "stag",
+          "text": "장수풍뎅이, 누가 앞장설지 힘겨루기로 정하자!"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "sumo",
+      "icon": "💪",
+      "text": "장수풍뎅이를 응원해요",
+      "night": true,
+      "announce": "장수풍뎅이와 사슴벌레의 힘겨루기! 화면을 톡톡톡 눌러 응원해요!",
+      "after": [
+        {
+          "who": "rhino",
+          "text": "고마워! 힘이 불끈 났어. 이제 스모기를 막으러 가자!"
+        }
+      ]
+    },
+    {
+      "ch": "ch1",
+      "type": "boss",
+      "at": "oakBoss",
+      "icon": "😈",
+      "text": "스모기의 연기를 날려요",
+      "night": true,
+      "announce": "큰 참나무 앞에 스모기가 나타났어요!",
+      "before": [
+        {
+          "who": "smogi",
+          "text": "흥! 내 연기 구름을 이길 수 있을까?"
+        }
+      ],
+      "after": [
+        {
+          "who": "smogi",
+          "text": "으악! 내 연기가 다 날아갔잖아!"
+        },
+        {
+          "who": "smogi",
+          "text": "초록 구슬은 돌려줄게. 하지만 다음엔 계곡을 잿빛으로 만들 테다!"
+        }
+      ]
+    },
+    {
+      "ch": "ch2",
+      "type": "talk",
+      "icon": "🏞️",
+      "text": "계곡으로 가요",
+      "opens": "valley",
+      "night": false,
+      "lines": [
+        {
+          "who": "narr",
+          "text": "아침이 밝았어요. 숲 위쪽 계곡 길이 열렸어요."
+        },
+        {
+          "who": "goldie",
+          "text": "킁킁, 계곡 쪽에서 스모기 냄새가 나! 가 보자!"
+        }
+      ]
+    },
+    {
+      "ch": "ch2",
+      "type": "meet",
+      "target": "minnow",
+      "icon": "🐟",
+      "text": "계곡물 속 버들치를 찾아요",
+      "after": [
+        {
+          "who": "minnow",
+          "text": "스모기가 계곡에 쓰레기를 버려서 물이 탁해지고 있어!"
+        },
+        {
+          "who": "goldie",
+          "text": "물에 들어가면 헤엄칠 수 있어! 같이 쓰레기를 건지자!"
+        }
+      ]
+    },
+    {
+      "ch": "ch2",
+      "type": "collect",
+      "item": "trash",
+      "area": "stream",
+      "icon": "🧴",
+      "text": "개울 속 쓰레기를 건져요",
+      "announce": "개울 속 쓰레기 여섯 개를 건져요! 물에 들어가면 헤엄쳐요.",
+      "after": [
+        {
+          "who": "minnow",
+          "text": "물이 다시 맑아졌어! 정말 고마워!"
+        }
+      ]
+    },
+    {
+      "ch": "ch2",
+      "type": "meet",
+      "target": "crayfish",
+      "icon": "🦞",
+      "text": "돌 밑에 숨은 가재를 찾아요",
+      "after": [
+        {
+          "who": "crayfish",
+          "text": "스모기가 폭포 쪽으로 날아가는 걸 봤어. 물총새에게 물어봐!"
+        }
+      ]
+    },
+    {
+      "ch": "ch2",
+      "type": "meet",
+      "target": "kingfisher",
+      "icon": "🐦",
+      "text": "나뭇가지 위 물총새를 찾아요",
+      "after": [
+        {
+          "who": "kingfisher",
+          "text": "폭포 앞에 스모기가 있어! 내가 위에서 지켜볼게."
+        }
+      ]
+    },
+    {
+      "ch": "ch2",
+      "type": "boss",
+      "at": "fallBoss",
+      "icon": "😈",
+      "text": "스모기의 연기를 날려요",
+      "announce": "폭포 앞에 스모기가 나타났어요!",
+      "before": [
+        {
+          "who": "smogi",
+          "text": "또 너희냐! 이번엔 더 큰 연기 구름이다!"
+        }
+      ],
+      "after": [
+        {
+          "who": "smogi",
+          "text": "으으, 또 졌다! 파란 구슬도 가져가!"
+        },
+        {
+          "who": "smogi",
+          "text": "하지만 바닷가는 절대 못 지킬걸!"
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "talk",
+      "icon": "🏖️",
+      "text": "바닷가로 가요",
+      "opens": "beach",
+      "night": false,
+      "lines": [
+        {
+          "who": "narr",
+          "text": "숲 오른쪽 바닷가 길이 열렸어요."
+        },
+        {
+          "who": "goldie",
+          "text": "바다 냄새! 스모기가 바닷가에서 뭔가 꾸미고 있어!"
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "meet",
+      "target": "crab",
+      "icon": "🦀",
+      "text": "바닷가의 꽃게를 찾아요",
+      "after": [
+        {
+          "who": "crab",
+          "text": "스모기가 모래사장에 쓰레기를 잔뜩 버렸어!"
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "collect",
+      "item": "trash",
+      "area": "beach",
+      "icon": "🧴",
+      "text": "바닷가 쓰레기를 주워요",
+      "announce": "바닷가 쓰레기 여섯 개를 주워요! 바다에 떠 있는 것도 있어요.",
+      "after": [
+        {
+          "who": "crab",
+          "text": "모래사장이 깨끗해졌어! 소라게가 너를 찾고 있었어."
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "meet",
+      "target": "hermit",
+      "icon": "🐚",
+      "text": "껍데기를 지고 다니는 소라게를 찾아요",
+      "after": [
+        {
+          "who": "hermit",
+          "text": "스모기 때문에 내 껍데기에 금이 갔어. 새 집이 될 껍데기를 찾아 줄래?"
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "collect",
+      "item": "shell",
+      "icon": "🐚",
+      "text": "빈 고둥 껍데기를 찾아요",
+      "announce": "빈 고둥 껍데기 네 개를 찾아요!",
+      "after": [
+        {
+          "who": "hermit",
+          "text": "딱 맞는 새 집이야! 불가사리가 바위 웅덩이에서 기다려."
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "meet",
+      "target": "starfish",
+      "icon": "⭐",
+      "text": "바위 웅덩이의 불가사리를 찾아요",
+      "after": [
+        {
+          "who": "starfish",
+          "text": "스모기는 바다 위 바위에 있어. 헤엄쳐서 가 봐!"
+        }
+      ]
+    },
+    {
+      "ch": "ch3",
+      "type": "boss",
+      "at": "seaBoss",
+      "icon": "😈",
+      "text": "바다 바위의 스모기를 막아요",
+      "announce": "바다 위 바위에 스모기가 있어요! 헤엄쳐서 가요!",
+      "before": [
+        {
+          "who": "smogi",
+          "text": "여기까지 헤엄쳐 오다니! 마지막 연기 구름이다!"
+        }
+      ],
+      "after": [
+        {
+          "who": "smogi",
+          "text": "엉엉… 사실 나는 친구가 하나도 없어서 심술을 부린 거야."
+        },
+        {
+          "who": "goldie",
+          "text": "그럼 우리랑 친구 하자! 같이 놀면 되잖아."
+        },
+        {
+          "who": "smogi",
+          "text": "정말? 고마워… 노란 구슬도 돌려줄게."
+        },
+        {
+          "who": "boss",
+          "text": "스모기, 실패했구나. 이번엔 이 먹구름 대마왕이 직접 간다!"
+        },
+        {
+          "who": "narr",
+          "text": "하늘 저편에서 먹구름 대마왕이 다가오고 있어요. 2부에서 계속!"
+        }
+      ]
+    }
   ],
   "msg": {
     "dogComing": "멍멍! 누가 달려와요!",
-    "firstTip": "골디를 따라가거나, 미션 카드를 톡 눌러요.",
+    "firstTip": "미션 카드를 보고 따라가요. 손가락을 대고 끌면 걸어가요!",
     "follow": "골디를 따라가요!",
     "success": "미션 성공! 참 잘했어요!",
     "bye": "고마워! 잘 가!",
@@ -116,20 +583,122 @@
     "notYet": "이 친구는 다음 미션에서 만나요! 지금 미션은 이거예요.",
     "barkCall": "멍멍! 골디를 따라와요! 미션 카드를 톡 해도 돼요.",
     "wait": "조금만 기다려요!",
-    "pet": ["골디가 좋아해요!", "멍멍! 같이 가자!", "골디 꼬리가 살랑살랑!"],
+    "pet": [
+      "골디가 좋아해요!",
+      "멍멍! 같이 가자!",
+      "골디 꼬리가 살랑살랑!"
+    ],
     "ballFound": "공을 찾았어요! 이제 골디를 톡 눌러서 공을 던져 줘요!",
     "ballTapDog": "골디를 톡 눌러서 공을 던져 줘요!",
     "ballThrow": "던져라! 골디, 물어 와!",
     "ballDone": "골디가 공을 물어 왔어요! 리트리버는 물어 오기 선수예요.",
     "flashTitle": "손전등을 얻었어요!",
     "flashText": "해가 졌어요. 밤에만 나오는 장수풍뎅이와 사슴벌레를 만나러 가요!",
-    "doneTitle": "탐험 완료!",
-    "doneText": "숲과 계곡과 바닷가의 친구들을 모두 만났어요. 최고의 탐험가예요! 이제 해와 달 버튼으로 낮과 밤을 바꿔 가며 자유롭게 놀아요.",
     "back": "다시 왔구나! 오늘도 미션을 해 볼까?",
     "backDone": "오늘도 놀러 왔어요! 낮과 밤을 바꿔 가며 친구들을 다시 만나 봐요.",
     "nightOn": "밤이 되었어요. 손전등을 켰어요!",
     "dayOn": "해가 떴어요!",
     "locked": "아직 길이 막혀 있어요. 미션을 하면 열려요!",
-    "gateOpen": "길이 열렸어요!"
-  }
+    "gateOpen": "길이 열렸어요!",
+    "swim": "물에 들어왔어요! 헤엄칠 수 있어요.",
+    "got": "찾았다!",
+    "allGot": "다 모았어요!",
+    "sumoTip": "화면을 톡톡톡 빠르게 눌러요!",
+    "sumoWin": "장수풍뎅이가 이겼어요!",
+    "sumoDraw": "둘 다 힘이 세요! 무승부!",
+    "sumoStart": "시작!",
+    "bossTip": "회색 연기 구름을 톡톡 눌러서 날려 보내요!",
+    "bossNear": "스모기에게 더 가까이 가요!",
+    "partTitle": "1부 완료!",
+    "partText": "스모기와 친구가 되었어요. 2부 먹구름 대마왕 편을 기다려 주세요! 그동안 해와 달 버튼으로 낮과 밤을 바꿔 가며 자유롭게 놀아요.",
+    "chapterTitle": "장 완료!"
+  },
+  "speakers": {
+    "narr": {
+      "name": "",
+      "icon": "📖"
+    },
+    "goldie": {
+      "name": "골디",
+      "icon": "🐶"
+    },
+    "smogi": {
+      "name": "스모기",
+      "icon": "😈"
+    },
+    "boss": {
+      "name": "먹구름 대마왕",
+      "icon": "⛈️"
+    },
+    "squirrel": {
+      "name": "다람쥐",
+      "icon": "🐿️"
+    },
+    "cicada": {
+      "name": "매미",
+      "icon": "🦗"
+    },
+    "ladybug": {
+      "name": "무당벌레",
+      "icon": "🐞"
+    },
+    "rhino": {
+      "name": "장수풍뎅이",
+      "icon": "🪲"
+    },
+    "stag": {
+      "name": "사슴벌레",
+      "icon": "🪲"
+    },
+    "minnow": {
+      "name": "버들치",
+      "icon": "🐟"
+    },
+    "crayfish": {
+      "name": "가재",
+      "icon": "🦞"
+    },
+    "kingfisher": {
+      "name": "물총새",
+      "icon": "🐦"
+    },
+    "crab": {
+      "name": "꽃게",
+      "icon": "🦀"
+    },
+    "hermit": {
+      "name": "소라게",
+      "icon": "🐚"
+    },
+    "starfish": {
+      "name": "불가사리",
+      "icon": "⭐"
+    }
+  },
+  "chapters": [
+    {
+      "id": "ch1",
+      "region": "forest",
+      "title": "1장. 잿빛 마법사 스모기",
+      "gem": "초록 구슬",
+      "gemIcon": "🟢",
+      "doneText": "초록 구슬을 되찾았어요! 숲이 다시 초록빛으로 반짝여요."
+    },
+    {
+      "id": "ch2",
+      "region": "valley",
+      "title": "2장. 탁해진 계곡",
+      "gem": "파란 구슬",
+      "gemIcon": "🔵",
+      "doneText": "파란 구슬을 되찾았어요! 계곡물이 다시 반짝반짝 흘러요."
+    },
+    {
+      "id": "ch3",
+      "region": "beach",
+      "title": "3장. 잿빛 바다",
+      "gem": "노란 구슬",
+      "gemIcon": "🟡",
+      "doneText": "노란 구슬을 되찾았어요! 바다가 다시 파랗게 빛나요."
+    }
+  ]
 }

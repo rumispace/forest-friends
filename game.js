@@ -1977,6 +1977,9 @@ function spawnItems(m) {
     addXray(mesh, 0xffe066, 0.55);
     return { mesh, pos: new V3(x, 0, z), got: false, water, ph: i * 1.3, base, flat: !!mesh.userData.flat };
   });
+  // 끄기 전에 주운 것은 이미 주운 것으로
+  if (save.collect && save.collect.step === step) items.forEach((it, i) => { if (save.collect.got.includes(i)) { it.got = true; it.k = 0; it.mesh.visible = false; } });
+  else save.collect = { step, got: [] };
 }
 function updateItems(dt, t) {
   if (!items.length) return;
@@ -1986,7 +1989,7 @@ function updateItems(dt, t) {
     if (!it.flat) { it.mesh.rotation.y += dt * 0.8; it.mesh.position.y = it.base + (it.water ? 0 : 0.05) + Math.abs(Math.sin(t * 2 + it.ph)) * 0.12; }
     else it.mesh.children.forEach((b, k) => { if (k > 0 && b.geometry === GEO.ball) b.position.y = 0.08 + ((t * 0.5 + k * 0.25) % 1) * 0.45; });
     if (flatDist(bp, it.pos) < 1.3) {
-      it.got = true; it.k = 1; sfx.pop();
+      it.got = true; it.k = 1; sfx.pop(); save.collect = { step, got: items.map((x, i) => x.got ? i : -1).filter(i => i >= 0) }; persist();
       if (['acorn', 'mushroom', 'shell'].includes(cur() && cur().item)) addItem(cur().item, 1, false); tone(1100, 0.15, 'triangle', 0.12, 0.06);
       spawnHearts(it.pos.clone().setY(0.8)); paintMission();
       const left = items.filter(x => !x.got).length;
@@ -3555,7 +3558,7 @@ function frame() {
   updateKick(dt); updateGrumps(dt, t); updateFinisher(dt); updateTutorial(dt, t);
   if (!playing) updateHeroPreview(dt);
   $('#actBtns').classList.toggle('hide', !playing || blocked());
-  updateEndless(dt, t, moving); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
+  updateEndless(dt, t, moving); autoSave(dt); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
   if (smogiHurt > 0) smogiHurt = Math.max(0, smogiHurt - dt * 0.6);
   const bossWho = cur() && cur().type === 'boss' ? (cur().villain || 'smogi') : null;
   for (const [who, v] of Object.entries(actors)) {
@@ -3637,6 +3640,52 @@ function frame() {
 camera.position.copy(boy.group.position).add(CAM_OFF);
 frame();
 
+// ───────── 자동 저장 · 이어하기 ─────────
+let saveT = 0;
+function snapshot() {
+  if (!playing) return;
+  const p = boy.group.position;
+  if (!isWater(p.x, p.z)) save.pos = { x: +p.x.toFixed(2), z: +p.z.toFixed(2), ry: +boy.group.rotation.y.toFixed(2) };
+  save.savedAt = Date.now();
+}
+function autoSave(dt) { if (!playing) return; saveT += dt; if (saveT > 3) { saveT = 0; snapshot(); persist(); } }
+addEventListener('pagehide', () => { snapshot(); persist(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { snapshot(); persist(); } });
+try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); } catch (e) {} // 저장이 지워지지 않게 부탁
+function restorePosition() {
+  const p = save.pos; if (!p || !walkable(p.x, p.z)) return;
+  boy.group.position.set(p.x, groundH(p.x, p.z), p.z); boy.group.rotation.y = p.ry || 0; faceAngle = p.ry || 0;
+  boyBaseY = groundH(p.x, p.z); camY = Math.max(0, boyBaseY);
+  goldie.group.position.set(p.x + 1.4, groundH(p.x + 1.4, p.z), p.z + 0.4);
+  camera.position.copy(boy.group.position).add(CAM_OFF);
+  region = regionAt(p.x, p.z);
+}
+// 시작 화면: 저장이 있으면 '이어서 탐험하기'
+const hasSave = !!(save.found && save.found.goldie);
+if (hasSave) {
+  $('#startBtn').textContent = '▶ 이어서 탐험하기';
+  const mNow = MISSIONS[Math.min(step, MISSIONS.length - 1)];
+  $('#saveInfo').textContent = `${HEROES[heroSel].name} · ${save.done ? '모든 이야기 완료!' : `미션 ${Math.min(step + 1, MISSIONS.length)}/${MISSIONS.length} ${mNow.icon}`} · ⭐ ${save.wallet || 0} · 친구 ${Object.keys(save.found).length}`;
+  $('#saveInfo').classList.remove('hide'); $('#newGameBtn').classList.remove('hide');
+}
+$('#newGameBtn').onclick = () => { if (confirm('지금까지의 진행을 모두 지우고 처음부터 새로 할까요?')) { localStorage.removeItem(SAVE_KEY); location.reload(); } };
+// 저장 코드: 다른 브라우저·기기로 옮기기
+$('#setExport').onclick = async () => {
+  snapshot(); persist();
+  const code = 'FF1:' + btoa(unescape(encodeURIComponent(JSON.stringify(save))));
+  try { await navigator.clipboard.writeText(code); alert('저장 코드를 복사했어요. 다른 기기의 게임에서 「저장 코드 넣기」에 붙여 넣으세요.'); }
+  catch (e) { prompt('아래 저장 코드를 길게 눌러 복사하세요.', code); }
+};
+$('#setImport').onclick = () => {
+  const code = (prompt('복사해 둔 저장 코드를 붙여 넣으세요.') || '').trim();
+  if (!code) return;
+  try {
+    const data = JSON.parse(decodeURIComponent(escape(atob(code.replace(/^FF1:/, '')))));
+    if (!data || !data.found) throw 0;
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data)); alert('불러왔어요! 게임을 다시 시작해요.'); location.reload();
+  } catch (e) { alert('저장 코드가 올바르지 않아요. 다시 복사해 주세요.'); }
+};
+
 // ───────── 시작·설정 ─────────
 refreshHud();
 // 시작할 때 전체 화면 + 가로 고정 (안드로이드 크롬 등에서 됨. 아이폰 사파리는 홈 화면 추가로)
@@ -3654,6 +3703,7 @@ $('#startBtn').onclick = () => {
   initAudio(); sfx.pop(); preloadVoices();
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } // iOS 음성 잠금 풀기
   save.hero = heroSel; persist(); setHero(heroSel); closeHeroPreview();
+  restorePosition();
   $('#title').classList.add('hide'); playing = true; $('#actBtns').classList.remove('hide'); paintWallet();
   rollVisitors(); refillBoard(); makeBuddy(save.buddy); refreshHud();
   const tellVisitors = () => { if (talkOpen || blocked()) { setTimeout(tellVisitors, 3000); return; } save.toldVisitors = true; persist(); say(NEW_DAY ? [MSG.newDay, MSG.visitorsHere] : MSG.visitorsHere, true, 5000); };
@@ -3664,6 +3714,7 @@ $('#startBtn').onclick = () => {
     setTimeout(() => { save.found.goldie = true; persist(); sfx.chime(); cardBookId = 'goldie'; openCard('goldie', true, null); }, 2600);
   } else if (save.done) say(MSG.backDone);
   else if (!save.toldFun) { save.toldFun = true; persist(); say(MSG.newFun, true, 6000); setTimeout(() => startMission(), 6500); }
+  else if (!save.tutDone) { setTimeout(() => startTutorial(() => startMission()), 600); } // 튜토리얼 도중에 껐으면 다시
   else { speak(MSG.back); setTimeout(() => startMission(), 2600); }
 };
 // 부모용 설정: 톱니를 1초 꾹

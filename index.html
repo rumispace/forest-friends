@@ -190,6 +190,8 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
     <div class="setRow"><button id="setSound" class="btn ghost"></button></div>
     <div class="setRow"><button id="setMusic" class="btn ghost"></button></div>
     <div class="setRow"><button id="setTut" class="btn ghost">🎓 튜토리얼 다시 하기</button></div>
+    <div class="setRow"><button id="setExport" class="btn ghost">📋 저장 코드 복사</button> <button id="setImport" class="btn ghost">📥 저장 코드 넣기</button></div>
+    <p class="setNote">다른 브라우저·기기로 진행을 옮길 때 써요. 아이폰은 사파리와 홈 화면 아이콘의 저장이 서로 달라요.</p>
     <div class="setRow"><button id="setReset" class="btn danger">처음부터 다시</button></div>
     <button id="setClose" class="btn">닫기</button>
   </div>
@@ -206,6 +208,8 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
       <button id="heroNext" class="hArrow">▶</button>
     </div>
     <button id="startBtn" class="btn big">▶ 탐험 시작!</button>
+    <p id="saveInfo" class="hide"></p>
+    <button id="newGameBtn" class="btn ghost small hide">🌱 처음부터 새로 하기</button>
     <p class="sub">소리를 켜 주세요 🔊</p>
     <p id="homeTip">📱 아이폰은 공유 버튼 → <b>홈 화면에 추가</b>로 열면 전체 화면으로 할 수 있어요</p>
   </div>

@@ -325,3 +325,8 @@ body.iosweb #homeTip { display: block; }
 }
 @media (max-width: 760px) and (orientation: portrait) { #heroCanvas { width: 150px; height: 150px; } }
 .round.bump { animation: bump .35s ease-out; }
+
+#saveInfo { font-size: 18px; color: #3f5a2a; background: rgba(255,255,255,.7); border-radius: 14px; padding: 6px 14px; margin: 12px auto 0; display: inline-block; }
+#newGameBtn { margin-top: 10px; }
+.setNote { font-size: 14px; color: #7a6a50; margin: 4px 0 10px; line-height: 1.4; word-break: keep-all; }
+@media (orientation: landscape) and (max-height: 500px) { #saveInfo { font-size: 13px; margin-top: 6px; padding: 3px 10px; } #newGameBtn { margin-top: 4px; } }

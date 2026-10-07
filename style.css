@@ -330,3 +330,16 @@ body.iosweb #homeTip { display: block; }
 #newGameBtn { margin-top: 10px; }
 .setNote { font-size: 14px; color: #7a6a50; margin: 4px 0 10px; line-height: 1.4; word-break: keep-all; }
 @media (orientation: landscape) and (max-height: 500px) { #saveInfo { font-size: 13px; margin-top: 6px; padding: 3px 10px; } #newGameBtn { margin-top: 4px; } }
+
+/* ───── 액션 버튼: 캐릭터 발밑을 따라다니는 웃는 입 모양 (2026-10-07 아이가 오른쪽 아래를 어려워해서) ───── */
+#actBtns { left: 50%; top: 70%; right: auto !important; bottom: auto !important; flex-direction: row !important; align-items: flex-start; gap: 16px !important; transform: translateX(-50%); }
+#actBtns .act { opacity: .93; }
+#rideBtn { order: 1; margin-top: 0; }
+#kickBtn { order: 2; margin-top: 30px; width: 96px; height: 96px; font-size: 42px; }
+#jumpBtn { order: 3; margin-top: 0; }
+#fishBtn { position: absolute; left: 50%; top: -96px; transform: translateX(-50%); }
+@media (orientation: landscape) and (max-height: 500px) {
+  #actBtns { gap: 10px !important; }
+  #kickBtn { width: 66px; height: 66px; font-size: 28px; margin-top: 18px; }
+  #fishBtn { top: -66px; }
+}

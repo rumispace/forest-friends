@@ -3372,6 +3372,19 @@ document.querySelectorAll('.sb').forEach((b, i) => b.addEventListener('pointerdo
   if (simon.input.length === simon.seq.length) { simon.busy = true; $('#simonMsg').textContent = MSG.simonGood; speak(MSG.simonGood); setTimeout(nextSimonRound, 1500); }
 }));
 
+// 액션 버튼을 캐릭터 발밑에 (화면 밖으로는 안 나가게, 부드럽게 따라감)
+let actX = -1, actY = -1;
+function placeActBtns() {
+  const el = $('#actBtns'); if (el.classList.contains('hide')) return;
+  const bp = boy.group.position, sp = tmpV.set(bp.x, bp.y + 0.05, bp.z).project(camera);
+  const w = el.offsetWidth || 300, h = el.offsetHeight || 120, short = innerHeight < 500;
+  let x = (sp.x + 1) / 2 * innerWidth, y = (1 - sp.y) / 2 * innerHeight + (short ? 10 : 18);
+  x = Math.max(w / 2 + 8, Math.min(innerWidth - w / 2 - 8, x));
+  y = Math.max(innerHeight * 0.35, Math.min(innerHeight - h - 8, y));
+  if (actX < 0) { actX = x; actY = y; } else { actX += (x - actX) * 0.25; actY += (y - actY) * 0.25; }
+  el.style.left = actX.toFixed(1) + 'px'; el.style.top = actY.toFixed(1) + 'px';
+}
+
 // ───────── 메인 루프 ─────────
 const UP = new V3(0, 1, 0);
 let boyBaseY = 0, camY = 0, detour = 0, detourSide = 1, stuck = 0, region = 'forest', swimPh = 0, rippleCool = 0;
@@ -3633,6 +3646,7 @@ function frame() {
   sun.position.set(bp.x + 12, 22, bp.z + 8); sun.target.position.set(bp.x, 0, bp.z);
 
   renderer.render(scene, camera);
+  placeActBtns();
   drawMini(t);
   if (cardOpen && cardSpin) { cardSpin.rotation.y += dt * 0.6; sizeCard(); cardR.render(cardScene, cardCam); }
 }

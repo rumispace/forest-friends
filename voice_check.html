@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>목소리 듣기</title>
+<style>
+  body { font-family: -apple-system, 'Apple SD Gothic Neo', sans-serif; background: #f6f1e4; color: #3b2a1a; margin: 0; padding: 16px; }
+  h1 { font-size: 24px; margin: 0 0 4px; }
+  p.sub { margin: 0 0 16px; color: #7a6a50; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px; }
+  .who { background: #fff; border-radius: 14px; padding: 10px 12px; box-shadow: 0 2px 0 rgba(0,0,0,.08); }
+  .who h2 { font-size: 18px; margin: 0 0 6px; }
+  button { display: block; width: 100%; text-align: left; border: 0; background: #f2ead6; border-radius: 10px; padding: 7px 10px; margin: 4px 0; font-size: 15px; cursor: pointer; color: inherit; }
+  button:hover { background: #ffe9a3; }
+</style>
+</head>
+<body>
+<h1>🔊 캐릭터 목소리 듣기</h1>
+<p class="sub">대사를 누르면 게임에 들어간 목소리로 들려줘요. 바꾸고 싶은 캐릭터를 알려 주세요.</p>
+<div class="grid" id="grid"></div>
+<script>
+(async () => {
+  const S = await (await fetch('story.json?t=' + Date.now())).json();
+  const idx = await (await fetch('voice/index.json?t=' + Date.now())).json();
+  const by = {};
+  const add = (who, text) => { (by[who] = by[who] || []).length < 3 && !by[who].includes(text) && by[who].push(text); };
+  for (const m of S.missions) for (const k of ['lines', 'before', 'after']) for (const l of (m[k] || [])) add(l.who, l.text);
+  add('narr', S.friends[1].facts[0]);
+  const audio = new Audio();
+  const grid = document.getElementById('grid');
+  const order = ['narr', 'goldie', 'smogi', 'jjiri', 'boss', ...Object.keys(by).filter(k => !['narr', 'goldie', 'smogi', 'jjiri', 'boss'].includes(k))];
+  for (const who of order) {
+    if (!by[who]) continue;
+    const sp = S.speakers[who] || { name: '해설', icon: '📖' };
+    const box = document.createElement('div'); box.className = 'who';
+    box.innerHTML = `<h2>${sp.icon} ${sp.name || '해설'}</h2>`;
+    for (const t of by[who]) {
+      const b = document.createElement('button'); b.textContent = '▶ ' + t;
+      b.onclick = () => { const f = idx[t.split(/\s+/).join(' ')]; if (!f) return; audio.src = 'voice/' + f; audio.play(); };
+      box.appendChild(b);
+    }
+    grid.appendChild(box);
+  }
+})();
+</script>
+</body>
+</html>

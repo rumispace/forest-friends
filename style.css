@@ -343,3 +343,8 @@ body.iosweb #homeTip { display: block; }
   #kickBtn { width: 66px; height: 66px; font-size: 28px; margin-top: 18px; }
   #fishBtn { top: -66px; }
 }
+
+/* 확대 막기: 두 번 톡 확대 없음, 화면이 튕기지 않게 */
+html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
+button, .round, .act, .pill { touch-action: manipulation; }
+.panel { touch-action: pan-y; overscroll-behavior: contain; }

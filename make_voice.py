@@ -13,14 +13,43 @@ from pathlib import Path
 
 import edge_tts
 
-# 역할별 목소리 (이름, 속도, 높이)
+# 캐릭터마다 다른 목소리 (이름, 속도, 높이). 높이를 억지로 바꾸면 기계음처럼 들려서 원래 톤 그대로 쓴다.
+# 다국어 목소리도 한국어를 정확히 말한다 (Whisper 받아쓰기로 97~100% 확인, 2026-10-07)
+SUNHI, INJOON, HYUNSU = "ko-KR-SunHiNeural", "ko-KR-InJoonNeural", "ko-KR-HyunsuMultilingualNeural"
+EMMA, AVA, ANDREW, BRIAN = "en-US-EmmaMultilingualNeural", "en-US-AvaMultilingualNeural", "en-US-AndrewMultilingualNeural", "en-US-BrianMultilingualNeural"
+WILLIAM, SERAPHINA, FLORIAN = "en-AU-WilliamMultilingualNeural", "de-DE-SeraphinaMultilingualNeural", "de-DE-FlorianMultilingualNeural"
+VIVIENNE, REMY, GIUSEPPE, THALITA = "fr-FR-VivienneMultilingualNeural", "fr-FR-RemyMultilingualNeural", "it-IT-GiuseppeMultilingualNeural", "pt-BR-ThalitaMultilingualNeural"
 VOICES = {
-    "narr":   ("ko-KR-SunHiNeural", "-6%", "+8Hz"),     # 해설: 밝은 여자 성우
-    "friend": ("ko-KR-SunHiNeural", "+2%", "+22Hz"),    # 골디·숲속 친구들: 더 귀엽게
-    "smogi":  ("ko-KR-InJoonNeural", "+8%", "+4Hz"),    # 악당 스모기: 장난스러운 남자 목소리
-    "boss":   ("ko-KR-HyunsuMultilingualNeural", "-12%", "-14Hz"),  # 먹구름 대마왕: 낮고 느리게
-    "jjiri":  ("ko-KR-HyunsuMultilingualNeural", "+14%", "+24Hz"),  # 번개 꼬마 찌릿이: 빠르고 높게
+    "narr":       (SUNHI, "+10%", "+0Hz"),      # 해설
+    "goldie":     (EMMA, "+12%", "+0Hz"),       # 골디: 밝고 다정하게
+    "smogi":      (INJOON, "+12%", "+0Hz"),     # 잿빛 마법사 스모기
+    "jjiri":      (HYUNSU, "+16%", "+0Hz"),     # 번개 꼬마 찌릿이: 빠르게
+    "boss":       (GIUSEPPE, "-2%", "-4Hz"),    # 먹구름 대마왕: 낮고 묵직하게
+    "squirrel":   (SERAPHINA, "+14%", "+0Hz"),
+    "cicada":     (REMY, "+12%", "+0Hz"),
+    "ladybug":    (THALITA, "+12%", "+0Hz"),
+    "rhino":      (ANDREW, "+8%", "+0Hz"),      # 장수풍뎅이: 힘센 형
+    "stag":       (FLORIAN, "+8%", "+0Hz"),
+    "minnow":     (VIVIENNE, "+12%", "+0Hz"),
+    "crayfish":   (BRIAN, "+10%", "+0Hz"),
+    "kingfisher": (EMMA, "+14%", "+0Hz"),
+    "crab":       (REMY, "+14%", "+0Hz"),
+    "hermit":     (THALITA, "+10%", "+0Hz"),
+    "starfish":   (SERAPHINA, "+8%", "+0Hz"),
+    "bat":        (FLORIAN, "+10%", "+0Hz"),
+    "salamander": (VIVIENNE, "+10%", "+0Hz"),
+    "badger":     (WILLIAM, "+6%", "+0Hz"),     # 오소리 아저씨
+    "mudskipper": (REMY, "+14%", "+0Hz"),
+    "fiddler":    (ANDREW, "+12%", "+0Hz"),
+    "spoonbill":  (SERAPHINA, "+10%", "+0Hz"),
+    "hare":       (THALITA, "+14%", "+0Hz"),
+    "goral":      (BRIAN, "+8%", "+0Hz"),
+    "owl":        (WILLIAM, "+0%", "+0Hz"),     # 부엉이 할아버지: 천천히
 }
+
+def tts_text(s):
+    """읽기용으로만 다듬기: 말줄임표는 짧은 쉼표로 (길게 끊겨 어색했다)"""
+    return s.replace("…", ",").replace("...", ",").replace(" ,", ",")
 
 ROOT = Path(__file__).parent
 OUT = ROOT / "voice"
@@ -43,7 +72,7 @@ def lines(story):
         for key in ("lines", "before", "after"):
             for ln in m.get(key, []):
                 who = ln["who"]
-                add(ln["text"], who if who in ("narr", "smogi", "boss", "jjiri") else "friend")
+                add(ln["text"], who if who in VOICES else "narr")
     for f in story.get("visitors", []):
         add(f["intro"]); add(f["arrive"])
         for x in f["facts"]: add(x)
@@ -65,14 +94,14 @@ async def main():
     index = {}
     todo = []
     for s, who in lines(story):
-        name = hashlib.sha1((who + "|" + s).encode()).hexdigest()[:10] + ".mp3"
+        name = hashlib.sha1(("|".join(VOICES.get(who, VOICES["narr"])) + "|" + s).encode()).hexdigest()[:10] + ".mp3"
         index[s] = name
         if redo or not (OUT / name).exists():
             todo.append((s, who, name))
     for i, (s, who, name) in enumerate(todo, 1):
         print(f"[{i}/{len(todo)}] ({who}) {s}")
-        voice, rate, pitch = VOICES[who]
-        await edge_tts.Communicate(s, voice, rate=rate, pitch=pitch).save(str(OUT / name))
+        voice, rate, pitch = VOICES.get(who, VOICES["narr"])
+        await edge_tts.Communicate(tts_text(s), voice, rate=rate, pitch=pitch).save(str(OUT / name))
     (OUT / "index.json").write_text(json.dumps(index, ensure_ascii=False, indent=0))
     keep = set(index.values()) | {"index.json"}
     for f in OUT.iterdir():

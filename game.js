@@ -1764,6 +1764,7 @@ function closeCard() {
     say(MSG.bye, true, 2000);
     setTimeout(() => { if (cur() && cur().target === c.id) completeMission(); }, 1900);
   }
+  if (!wasNew && c && cur() && cur().type === 'meet' && cur().target === c.id && save.found[c.id]) setTimeout(() => { if (cur() && cur().target === c.id) completeMission(); }, 600);
   if (wasNew && !c) setTimeout(() => save.tutDone ? startMission() : startTutorial(() => startMission()), 400); // 골디 첫 인사 뒤 튜토리얼 → 이야기
 }
 $('#cardSpeak').onclick = () => { sfx.tap(); readCard(DEF[cardBookId || (cardCreature ? cardCreature.id : 'goldie')]); };
@@ -1915,6 +1916,7 @@ function startMission() {
   paintMission(); refreshHud();
   const box = $('#mission'); box.classList.remove('flash'); box.offsetHeight; box.classList.add('flash');
   if (m.type === 'talk') { playLines(m.lines, () => completeMission(true)); return; }
+  if (m.type === 'meet' && save.found[m.target]) { setTimeout(() => { if (cur() === m) completeMission(); }, 1200); return; } // 만난 뒤 완료 저장 전에 꺼졌던 경우
   if (m.type === 'fetch') { fetchState.step = 'find'; ballMesh.visible = true; ballMesh.position.copy(SPOT.ball).setY(0.25); }
   if (m.type === 'collect') spawnItems(m);
   if (m.type === 'boss') { villainCome(bossSpot(m), m.villain || 'smogi'); }
@@ -1980,6 +1982,7 @@ function spawnItems(m) {
   // 끄기 전에 주운 것은 이미 주운 것으로
   if (save.collect && save.collect.step === step) items.forEach((it, i) => { if (save.collect.got.includes(i)) { it.got = true; it.k = 0; it.mesh.visible = false; } });
   else save.collect = { step, got: [] };
+  if (items.length && items.every(it => it.got)) setTimeout(() => { if (cur() && cur().type === 'collect') completeMission(); }, 1200);
 }
 function updateItems(dt, t) {
   if (!items.length) return;

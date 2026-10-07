@@ -11,6 +11,20 @@
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-180.png">
 <script>
+// iPad 사파리는 '확대 금지'를 무시한다 → 두 손가락 확대·두 번 톡 확대를 직접 막고, 확대되면 원래 크기로 되돌린다
+(() => {
+  const stop = e => e.preventDefault();
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev => document.addEventListener(ev, stop, { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+  let lastEnd = 0;
+  document.addEventListener('touchend', e => { const now = Date.now(); if (now - lastEnd < 320 && !e.target.closest('input,textarea')) e.preventDefault(); lastEnd = now; }, { passive: false });
+  const VP = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover';
+  const reset = () => { const m = document.querySelector('meta[name=viewport]'); if (!m) return; m.setAttribute('content', VP + ',minimum-scale=1'); setTimeout(() => m.setAttribute('content', VP), 60); };
+  if (window.visualViewport) visualViewport.addEventListener('resize', () => { if (visualViewport.scale > 1.01) reset(); });
+  document.addEventListener('gestureend', () => setTimeout(reset, 50));
+})();
+</script>
+<script>
 // 카카오톡 안의 브라우저는 전체 화면이 안 되므로 바깥 브라우저(크롬·사파리)로 연다
 if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/openExternal?url=' + encodeURIComponent(location.href);
 </script>

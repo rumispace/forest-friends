@@ -291,3 +291,37 @@ body.iosweb #homeTip { display: block; }
   #boardList { gap: 6px; margin-bottom: 8px; } .qitem { padding: 5px 10px; border-width: 3px; } .qi { font-size: 26px; } .qt { font-size: 15px; } .qr { font-size: 13px; }
 }
 @media (max-width: 760px) and (orientation: portrait) { .qtrack { font-size: 13px; max-width: 46vw; } }
+
+/* 시작 화면: 주인공 고르기 */
+.heroPick { display: flex; align-items: center; justify-content: center; gap: 10px; margin: -14px 0 16px; }
+.heroView { display: flex; flex-direction: column; align-items: center; }
+#heroCanvas { width: 200px; height: 200px; display: block; }
+#heroName { font-size: 26px; color: #3f7a2a; background: rgba(255,255,255,.75); border-radius: 14px; padding: 2px 14px; margin-top: -8px; }
+.hArrow { width: 60px; height: 60px; border-radius: 50%; background: #fff; font-size: 26px; color: #3f7a2a; box-shadow: 0 5px 0 rgba(0,0,0,.15); }
+.hArrow:active { transform: translateY(3px); }
+/* 얍 버튼 */
+.kickAct { background: #ffe1d6; }
+.kickAct.ready { background: #ffd23f; box-shadow: 0 0 0 6px rgba(255,210,63,.5), 0 6px 0 rgba(0,0,0,.18); }
+/* 가방 */
+.bagPanel { width: min(94vw, 720px); padding: 18px 20px 20px; text-align: center; }
+.bagPanel h2 { font-size: 32px; margin: 0 0 10px; color: #6b3f12; }
+#bagGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 10px; text-align: center; }
+.bagHead { grid-column: 1 / -1; text-align: left; font-size: 20px; color: #6b3f12; margin-top: 4px; }
+.bitem { background: #fff; border: 4px solid #e9d7b0; border-radius: 18px; padding: 8px 4px; font-family: inherit; font-size: 16px; color: #3b2a1a; position: relative; }
+.bitem .ic { font-size: 40px; line-height: 1.2; }
+.bitem .ct { position: absolute; top: 4px; right: 8px; font-size: 15px; background: #ffb84d; color: #fff; border-radius: 10px; padding: 0 6px; }
+.bitem.none { opacity: .35; }
+#bagDesc { font-size: 20px; min-height: 28px; margin: 12px 0; word-break: keep-all; }
+/* 튜토리얼 손가락 */
+#tutHand { position: fixed; z-index: 30; font-size: 64px; pointer-events: none; transform: translate(-30%, 10%); animation: tap 1.1s ease-in-out infinite; filter: drop-shadow(0 4px 4px rgba(0,0,0,.3)); }
+#tutHand.swipe { animation: swipe 1.8s ease-in-out infinite; }
+@keyframes tap { 50% { transform: translate(-30%, 30%) scale(.9); } }
+@keyframes swipe { 0% { transform: translate(-30%, 10%); opacity: 0; } 15% { opacity: 1; } 70% { transform: translate(-30%, -110px); opacity: 1; } 100% { transform: translate(-30%, -110px); opacity: 0; } }
+@media (orientation: landscape) and (max-height: 500px) {
+  .heroPick { margin: -6px 0 8px; gap: 6px; } #heroCanvas { width: 110px; height: 110px; } #heroName { font-size: 16px; } .hArrow { width: 40px; height: 40px; font-size: 18px; }
+  .bagPanel { padding: 8px 12px 10px; } .bagPanel h2 { font-size: 20px; margin-bottom: 4px; }
+  #bagGrid { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 6px; } .bitem { font-size: 12px; padding: 4px 2px; border-width: 3px; } .bitem .ic { font-size: 26px; } .bagHead { font-size: 14px; }
+  #bagDesc { font-size: 14px; margin: 6px 0; min-height: 18px; } #tutHand { font-size: 44px; }
+}
+@media (max-width: 760px) and (orientation: portrait) { #heroCanvas { width: 150px; height: 150px; } }
+.round.bump { animation: bump .35s ease-out; }

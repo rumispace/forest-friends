@@ -48,6 +48,8 @@ def lines(story):
         add(f["intro"]); add(f["arrive"])
         for x in f["facts"]: add(x)
     for q in story.get("quests", []): add(q["text"])
+    for h in story.get("heroes", {}).values(): add(h["line"])
+    for it in story.get("items", []): add(it["got"]); add(it["desc"])
     for lst in story.get("fish", {}).values():
         for f in (lst if isinstance(lst, list) else [lst]):
             add(f["got"]); add(f["fact"])

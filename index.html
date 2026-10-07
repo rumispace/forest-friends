@@ -35,6 +35,7 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
   <div class="right">
     <button id="timeBtn" class="round" hidden>🌙</button>
     <button id="boardBtn" class="round">📜</button>
+    <button id="bagBtn" class="round">🎒</button>
     <button id="closetBtn" class="round">👕</button>
     <button id="bookBtn" class="round">📖</button>
   </div>
@@ -84,6 +85,7 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
 <div id="actBtns" class="hide">
   <button id="fishBtn" class="act fishAct hide">🎣<small>낚시</small></button>
   <button id="rideBtn" class="act">🐕<small>타기</small></button>
+  <button id="kickBtn" class="act kickAct">🥋<small>얍!</small></button>
   <button id="jumpBtn" class="act">🦘<small>점프</small></button>
 </div>
 
@@ -108,6 +110,19 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
     <button id="boardClose" class="btn">닫기</button>
   </div>
 </div>
+
+<!-- 가방 -->
+<div id="bag" class="overlay hide">
+  <div class="panel bagPanel">
+    <h2>🎒 내 가방 <span id="bagWallet" class="cw">⭐ 0</span></h2>
+    <div id="bagGrid"></div>
+    <p id="bagDesc">물건을 톡 하면 설명을 들려줘요.</p>
+    <button id="bagClose" class="btn">닫기</button>
+  </div>
+</div>
+
+<!-- 튜토리얼 손가락 -->
+<div id="tutHand" class="hide">👆</div>
 
 <!-- 옷장 -->
 <div id="closet" class="overlay hide">
@@ -174,6 +189,7 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
     <div class="setRow"><button id="setVoice" class="btn ghost"></button></div>
     <div class="setRow"><button id="setSound" class="btn ghost"></button></div>
     <div class="setRow"><button id="setMusic" class="btn ghost"></button></div>
+    <div class="setRow"><button id="setTut" class="btn ghost">🎓 튜토리얼 다시 하기</button></div>
     <div class="setRow"><button id="setReset" class="btn danger">처음부터 다시</button></div>
     <button id="setClose" class="btn">닫기</button>
   </div>
@@ -184,6 +200,11 @@ if (/KAKAOTALK/i.test(navigator.userAgent)) location.href = 'kakaotalk://web/ope
   <div class="titleBox">
     <div class="titleEmoji">🪲 🐕 🐿️</div>
     <h1>숲속 친구들<br>탐험대</h1>
+    <div class="heroPick">
+      <button id="heroPrev" class="hArrow">◀</button>
+      <div class="heroView"><canvas id="heroCanvas"></canvas><div id="heroName">탐험가 소년</div></div>
+      <button id="heroNext" class="hArrow">▶</button>
+    </div>
     <button id="startBtn" class="btn big">▶ 탐험 시작!</button>
     <p class="sub">소리를 켜 주세요 🔊</p>
     <p id="homeTip">📱 아이폰은 공유 버튼 → <b>홈 화면에 추가</b>로 열면 전체 화면으로 할 수 있어요</p>

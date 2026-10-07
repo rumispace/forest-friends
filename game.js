@@ -18,6 +18,7 @@ const save = { step: 0, found: {}, flashlight: false, night: false, voice: true,
 try { Object.assign(save, JSON.parse(localStorage.getItem(SAVE_KEY)) || {}); } catch (e) {}
 function persist() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
 // 새로운 하루: 별과 보물상자가 다시 생긴다 (옷은 아직 없는 것만 상자에서 나온다)
+if (save.tutDone === undefined && (save.step > 0 || (save.found && save.found.goldie))) save.tutDone = true;
 const TODAY = new Date().toDateString();
 const NEW_DAY = !!save.day && save.day !== TODAY;
 if (save.day !== TODAY) { save.day = TODAY; save.stars = ''; save.chests = ''; save.toldVisitors = false; }
@@ -185,29 +186,44 @@ function insectLegs(g, color, xs, zs, len) {
 }
 
 // ───────── 캐릭터 모델 ─────────
-// 아이를 닮은 소년: 바가지 머리, 흰 깃 파란 셔츠, 남색 소매, 노란 소맷단·밑단
-function makeBoy() {
+// 고를 수 있는 주인공들 (첫째는 아이를 닮은 소년: 바가지 머리, 흰 깃 파란 셔츠, 남색 소매, 노란 소맷단·밑단)
+const HEROES = {
+  explorer: { name: '탐험가 소년', shirt: 0x6f93d8, sleeve: 0x2c3a66, trim: 0xf3c64a, pants: 0x7596d2, hair: 'bowl', collar: true, sun: true },
+  taekwon: { name: '태권 소년', shirt: 0xf7f7f2, sleeve: 0xf7f7f2, trim: null, pants: 0xf7f7f2, hair: 'bowl', dobok: true, belt: 0x1a1a1a },
+  girl: { name: '탐험가 소녀', shirt: 0xff8fb1, sleeve: 0xff8fb1, trim: 0xffffff, pants: 0x6f93d8, hair: 'pony', collar: true },
+  doctor: { name: '곤충 박사', shirt: 0x8aa860, sleeve: 0x8aa860, trim: 0xe8d8a8, pants: 0x7a6040, hair: 'bowl', glasses: true, backpack: true },
+};
+function makeBoy(o = HEROES.explorer) {
   const g = new THREE.Group();
-  const SKIN = 0xf6cfb2, HAIR = 0x1f1919, SHIRT = 0x6f93d8, NAVY = 0x2c3a66, YEL = 0xf3c64a, PANTS = 0x7596d2, WHITE = 0xf7f5ee;
+  const SKIN = 0xf6cfb2, HAIR = o.hair === 'pony' ? 0x3a2418 : 0x1f1919, WHITE = 0xf7f5ee;
   const legs = [];
   for (const s of [-1, 1]) {
     const p = new THREE.Group(); p.position.set(0.13 * s, 0.56, 0);
-    p.add(at(cyl(0.1, 0.11, 0.46, PANTS), 0, -0.22, 0));
-    p.add(at(blob(0.12, 0.08, 0.17, WHITE), 0, -0.48, 0.04));
+    p.add(at(cyl(0.1, o.dobok ? 0.13 : 0.11, 0.46, o.pants), 0, -0.22, 0));
+    p.add(at(blob(0.12, 0.08, 0.17, o.dobok ? SKIN : WHITE), 0, -0.48, 0.04));
     g.add(p); legs.push(p);
   }
-  g.add(at(cyl(0.3, 0.36, 0.56, SHIRT, 10), 0, 0.83, 0));
-  g.add(at(cyl(0.365, 0.37, 0.1, YEL, 10), 0, 0.58, 0));
-  const collar = mesh(new THREE.TorusGeometry(0.16, 0.055, 6, 12), mat(WHITE));
-  collar.rotation.x = Math.PI / 2; collar.position.y = 1.1; g.add(collar);
-  for (const s of [-1, 1]) { const f = at(blob(0.1, 0.03, 0.08, WHITE), 0.09 * s, 1.06, 0.2); f.rotation.z = 0.45 * s; f.rotation.x = 0.5; g.add(f); }
-  g.add(at(blob(0.03, 0.12, 0.02, WHITE), 0, 0.98, 0.3)); // 단추줄
-  const sun = cyl(0.07, 0.07, 0.03, YEL, 10); sun.rotation.x = Math.PI / 2; sun.position.set(0.15, 0.88, 0.315); g.add(sun);
+  g.add(at(cyl(0.3, 0.36, 0.56, o.shirt, 10), 0, 0.83, 0));
+  if (o.trim) g.add(at(cyl(0.365, 0.37, 0.1, o.trim, 10), 0, 0.58, 0));
+  if (o.collar) {
+    const collar = mesh(new THREE.TorusGeometry(0.16, 0.055, 6, 12), mat(WHITE));
+    collar.rotation.x = Math.PI / 2; collar.position.y = 1.1; g.add(collar);
+    for (const s of [-1, 1]) { const f = at(blob(0.1, 0.03, 0.08, WHITE), 0.09 * s, 1.06, 0.2); f.rotation.z = 0.45 * s; f.rotation.x = 0.5; g.add(f); }
+    g.add(at(blob(0.03, 0.12, 0.02, WHITE), 0, 0.98, 0.3)); // 단추줄
+  }
+  if (o.sun) { const sun = cyl(0.07, 0.07, 0.03, o.trim, 10); sun.rotation.x = Math.PI / 2; sun.position.set(0.15, 0.88, 0.315); g.add(sun); }
+  if (o.dobok) { // 태권도 도복: 브이넥 깃 + 띠
+    for (const s of [-1, 1]) { const v = blob(0.035, 0.2, 0.02, 0x1a1a1a); v.position.set(0.07 * s, 0.97, 0.3); v.rotation.z = 0.5 * s; v.rotation.x = 0.2; g.add(v); }
+    const belt = mesh(new THREE.TorusGeometry(0.345, 0.045, 5, 16), mat(o.belt)); belt.rotation.x = Math.PI / 2; belt.position.y = 0.62; g.add(belt);
+    g.add(at(blob(0.07, 0.05, 0.04, o.belt), 0, 0.62, 0.36));
+    for (const s of [-1, 1]) { const t = blob(0.03, 0.12, 0.02, o.belt); t.position.set(0.05 * s, 0.5, 0.37); t.rotation.z = 0.25 * s; g.add(t); }
+  }
+  if (o.backpack) { g.add(at(mesh(new THREE.BoxGeometry(0.42, 0.42, 0.18), mat(0xc9733a)), 0, 0.88, -0.36)); g.add(at(mesh(new THREE.BoxGeometry(0.3, 0.14, 0.06), mat(0xe8a060)), 0, 0.78, -0.47)); }
   const arms = [];
   for (const s of [-1, 1]) {
     const p = new THREE.Group(); p.position.set(0.37 * s, 1.02, 0);
-    p.add(at(cyl(0.085, 0.09, 0.4, NAVY), 0, -0.2, 0));
-    p.add(at(cyl(0.097, 0.097, 0.07, YEL), 0, -0.41, 0));
+    p.add(at(cyl(0.085, o.dobok ? 0.11 : 0.09, 0.4, o.sleeve), 0, -0.2, 0));
+    if (o.trim) p.add(at(cyl(0.097, 0.097, 0.07, o.trim), 0, -0.41, 0));
     p.add(at(blob(0.08, 0.08, 0.08, SKIN), 0, -0.49, 0));
     p.rotation.z = 0.12 * s; g.add(p); arms.push(p);
   }
@@ -215,6 +231,12 @@ function makeBoy() {
   head.add(blob(0.46, 0.44, 0.44, SKIN, {}, true));
   const hair = mesh(new THREE.SphereGeometry(0.485, 16, 9, 0, Math.PI * 2, 0, Math.PI * 0.56), mat(HAIR, { double: true }));
   hair.rotation.x = -0.32; hair.position.y = 0.03; head.add(hair);
+  if (o.hair === 'pony') { // 소녀: 긴 옆머리 + 묶은 머리
+    for (const s of [-1, 1]) head.add(at(blob(0.12, 0.3, 0.16, HAIR), 0.38 * s, -0.12, -0.08));
+    const tail = at(blob(0.16, 0.34, 0.14, HAIR), 0, 0.05, -0.55); tail.rotation.x = 0.5; head.add(tail);
+    head.add(at(blob(0.09, 0.07, 0.07, 0xff6fa8), 0, 0.22, -0.46));
+  }
+  if (o.glasses) for (const s of [-1, 1]) { const gl = mesh(new THREE.TorusGeometry(0.1, 0.018, 5, 14), mat(0x3a2a1a)); gl.position.set(0.155 * s, -0.03, 0.43); head.add(gl); }
   for (const s of [-1, 1]) {
     const e = new THREE.Group(); e.position.set(0.155 * s, -0.04, 0.4);
     e.add(ball(1, 0x1b1b1b)); e.children[0].scale.set(0.055, 0.075, 0.04);
@@ -1354,7 +1376,17 @@ for (let i = 0; i < 4; i++) {
 }
 
 // ───────── 주인공·골디 ─────────
-const boy = makeBoy();
+const boy = { group: new THREE.Group(), model: null, legs: null, arms: null, head: null };
+let heroHook = null; // 옷장·실루엣이 준비되면 주인공을 바꿀 때 다시 붙인다
+function setHero(id) {
+  if (!HEROES[id]) id = 'explorer';
+  const m = makeBoy(HEROES[id]);
+  if (boy.model) boy.group.remove(boy.model);
+  boy.model = m.group; boy.legs = m.legs; boy.arms = m.arms; boy.head = m.head;
+  boy.group.add(m.group);
+  if (heroHook) heroHook();
+}
+setHero(save.hero);
 boy.group.position.copy(SPOT.start); boy.group.rotation.y = Math.PI; scene.add(boy.group);
 const goldie = makeGoldie();
 goldie.group.scale.setScalar(0.9);
@@ -1732,7 +1764,7 @@ function closeCard() {
     say(MSG.bye, true, 2000);
     setTimeout(() => { if (cur() && cur().target === c.id) completeMission(); }, 1900);
   }
-  if (wasNew && !c) setTimeout(() => startMission(), 400); // 골디 첫 인사 뒤 이야기 시작
+  if (wasNew && !c) setTimeout(() => save.tutDone ? startMission() : startTutorial(() => startMission()), 400); // 골디 첫 인사 뒤 튜토리얼 → 이야기
 }
 $('#cardSpeak').onclick = () => { sfx.tap(); readCard(DEF[cardBookId || (cardCreature ? cardCreature.id : 'goldie')]); };
 $('#cardClose').onclick = closeCard;
@@ -1842,6 +1874,7 @@ function bossSpot(m) { return SPOT[m.at]; }
 function bossStand(m) { const p = bossSpot(m); return new V3(p.x, 0, p.z + 4); }
 // 지금 가야 할 곳 (없으면 null)
 function missionGoal() {
+  if (tut && tut.goal) return tut.goal;
   const m = cur(); if (!m || !playing) return null;
   if (m.type === 'meet') { const c = byId(m.target); return c.appear > 0.6 ? { pos: c.stand, look: c.anchor, c } : null; }
   if (m.type === 'collect') {
@@ -1898,7 +1931,7 @@ function completeMission(quiet) {
   if (!quiet) { addXP(5); buddyCheer(); }
   if (!quiet) { sfx.chime(); cheer = 1; addStars(3, boy.group.position.clone().setY(boy.group.position.y + 1.6)); }
   const next = () => {
-    if (m.reward === 'flashlight') { save.flashlight = true; persist(); showItem('🔦', MSG.flashTitle, MSG.flashText, () => startMission()); return; }
+    if (m.reward === 'flashlight') { save.flashlight = true; persist(); addItem('flashlight', 1, false); showItem('🔦', MSG.flashTitle, MSG.flashText, () => startMission()); return; }
     if (m.type === 'boss') { chapterDone(m); return; }
     startMission();
   };
@@ -1908,6 +1941,8 @@ function completeMission(quiet) {
 }
 function chapterDone(m) {
   const ch = chapterOf(m);
+  const gemOf = { ch1: 'gem_green', ch2: 'gem_blue', ch3: 'gem_yellow', ch4: 'sun', ch5: 'sun', ch6: 'sun' };
+  if (gemOf[ch.id]) addItem(gemOf[ch.id], 1, false);
   villainLeave(); clearMissionStuff();
   spawnHearts(boy.group.position.clone().setY(1.6)); cheer = 1;
   showItem(ch.gemIcon, `${ch.title.split('.')[0]} 완료!`, ch.doneText, () => {
@@ -1951,7 +1986,8 @@ function updateItems(dt, t) {
     if (!it.flat) { it.mesh.rotation.y += dt * 0.8; it.mesh.position.y = it.base + (it.water ? 0 : 0.05) + Math.abs(Math.sin(t * 2 + it.ph)) * 0.12; }
     else it.mesh.children.forEach((b, k) => { if (k > 0 && b.geometry === GEO.ball) b.position.y = 0.08 + ((t * 0.5 + k * 0.25) % 1) * 0.45; });
     if (flatDist(bp, it.pos) < 1.3) {
-      it.got = true; it.k = 1; sfx.pop(); tone(1100, 0.15, 'triangle', 0.12, 0.06);
+      it.got = true; it.k = 1; sfx.pop();
+      if (['acorn', 'mushroom', 'shell'].includes(cur() && cur().item)) addItem(cur().item, 1, false); tone(1100, 0.15, 'triangle', 0.12, 0.06);
       spawnHearts(it.pos.clone().setY(0.8)); paintMission();
       const left = items.filter(x => !x.got).length;
       if (left === 0) { say(MSG.allGot, true, 2000); setTimeout(() => completeMission(), 1800); }
@@ -1981,10 +2017,7 @@ function puffCloud(cl) {
   cl.gone = true; cl.k = 1;
   tone(700, 0.25, 'sine', 0.15, 0, 1400); tone(300, 0.3, 'triangle', 0.08, 0.02, 120);
   paintMission();
-  if (clouds.every(c => c.gone)) setTimeout(() => {
-    smogiHurt = 1;
-    const m = cur(); if (m && m.type === 'boss') completeMission();
-  }, 900);
+  if (clouds.every(c => c.gone)) setTimeout(startFinisher, 700);
 }
 let smogiHurt = 0;
 function updateClouds(dt, t) {
@@ -2110,7 +2143,7 @@ const HOLD_SEC = 1.3, JOY_R = 70;
 const tapMark = new THREE.Mesh(new THREE.RingGeometry(0.3, 0.42, 20), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
 tapMark.rotation.x = -Math.PI / 2; tapMark.renderOrder = 3; scene.add(tapMark);
 
-function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide') || !$('#fish').classList.contains('hide') || !$('#board').classList.contains('hide'); }
+function blocked() { return !playing || cardOpen || talkOpen || !$('#book').classList.contains('hide') || !$('#item').classList.contains('hide') || !$('#settings').classList.contains('hide') || !$('#sumo').classList.contains('hide') || !$('#simon').classList.contains('hide') || !$('#closet').classList.contains('hide') || !$('#fish').classList.contains('hide') || !$('#board').classList.contains('hide') || !$('#bag').classList.contains('hide'); }
 function setNdc(e) { ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1); ray.setFromCamera(ndc, camera); }
 function pickCreature() {
   const hits = ray.intersectObjects(creatures.filter(c => c.appear > 0.5).map(c => c.hit), false);
@@ -2256,7 +2289,7 @@ function updateFetch(dt) {
     const f = new V3(Math.sin(goldie.group.rotation.y), 0, Math.cos(goldie.group.rotation.y));
     ballMesh.position.copy(gp).addScaledVector(f, 0.85).setY(0.85);
     if (flatDist(gp, bp) < 1.7) {
-      fetchState.step = 'done'; ballMesh.visible = false; persist();
+      fetchState.step = 'done'; ballMesh.visible = false; persist(); addItem('ball', 1, false);
       spawnHearts(gp.clone().setY(1.3)); gState.wag = 3;
       say(MSG.ballDone, true, 4000);
       setTimeout(() => completeMission(), 3800);
@@ -2489,7 +2522,7 @@ function updateChests(dt, t) {
       const a = save.chests.split(''); a[i] = '1'; save.chests = a.join('');
       sfx.chime(); cheer = 1;
       spawnSparks(c.g.position.clone().setY(c.g.position.y + 0.8), [0xff6b6b, 0xffd23f, 0x5cd65c, 0x4da6ff, 0xc08cff], 26);
-      addStars(10); addXP(5); questEvent('chest');
+      addStars(10); addXP(5); questEvent('chest'); chestTreasure(c.x, c.z);
       const left = CLOSET.filter(it => !save.owned[it.id]);
       if (left.length) {
         const it = left[Math.floor(Math.random() * left.length)]; save.owned[it.id] = true; persist();
@@ -2516,6 +2549,7 @@ const CLOSET = [
 ];
 save.owned = save.owned || {}; save.wear = save.wear || { boy: null, goldie: null };
 const hatSlot = new THREE.Group(); hatSlot.position.set(0, 0.3, 0); boy.head.add(hatSlot);
+heroHook = () => { boy.head.add(hatSlot); applyWear(); addXray(boy.group, 0x5b8cff, 0.45); };
 const dogHeadSlot = new THREE.Group(); dogHeadSlot.position.set(0, 0.2, 0); goldie.head.add(dogHeadSlot);
 const dogBodySlot = new THREE.Group(); goldie.group.add(dogBodySlot);
 const WEAR = {
@@ -2568,14 +2602,14 @@ function canRide() { const m = cur(); return !(m && m.type === 'fetch' && fetchS
 function dismount() { riding = false; $('#rideBtn').classList.remove('on'); boy.legs.forEach(l => l.rotation.z = 0); }
 function setRide(on) {
   if (on && !canRide()) { say(MSG.rideNo, true, 2000); return; }
-  riding = on; $('#rideBtn').classList.toggle('on', on);
+  riding = on; $('#rideBtn').classList.toggle('on', on); tutEvent('ride', on);
   if (on) { goldie.group.position.x = boy.group.position.x; goldie.group.position.z = boy.group.position.z; sfx.bark(); }
   boy.legs.forEach((l, i) => l.rotation.z = on ? (i ? -0.9 : 0.9) : 0);
   say(on ? MSG.rideOn : MSG.rideOff, true, 2200);
 }
 function doJump() {
   if (!playing || blocked() || jumpY > 0.02) return;
-  jumpV = riding ? 7.2 : 6.6; questEvent('jump'); tone(420, 0.18, 'sine', 0.13, 0, 900);
+  jumpV = riding ? 7.2 : 6.6; questEvent('jump'); tutEvent('jump'); tone(420, 0.18, 'sine', 0.13, 0, 900);
 }
 $('#rideBtn').addEventListener('pointerdown', e => { e.preventDefault(); if (!playing || blocked()) return; setRide(!riding); });
 $('#jumpBtn').addEventListener('pointerdown', e => { e.preventDefault(); doJump(); });
@@ -3002,6 +3036,256 @@ function updateEndless(dt, t, moving) {
   if (q && q.type === 'buddy' && buddy && region === q.region) questEvent('buddy', region);
 }
 
+// ───────── 시작 화면: 주인공 고르기 (빙글 도는 3D 미리보기) ─────────
+const HERO_IDS = Object.keys(HEROES);
+let heroSel = HEROES[save.hero] ? save.hero : 'explorer';
+let heroPrev = null;
+function setupHeroPreview() {
+  const cv = $('#heroCanvas');
+  const r = new THREE.WebGLRenderer({ canvas: cv, antialias: true, alpha: true }); r.setPixelRatio(Math.min(devicePixelRatio, 2));
+  const sc = new THREE.Scene(); sc.add(new THREE.HemisphereLight(0xffffff, 0x9ab88a, 1.8)); const dl = new THREE.DirectionalLight(0xffffff, 2.2); dl.position.set(2, 4, 4); sc.add(dl);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 30); cam.position.set(0, 1.2, 4.3); cam.lookAt(0, 0.95, 0);
+  const spin = new THREE.Group(); sc.add(spin);
+  heroPrev = { r, sc, cam, spin, cv };
+  showHeroPreview();
+}
+function showHeroPreview() {
+  if (!heroPrev) return;
+  while (heroPrev.spin.children.length) heroPrev.spin.remove(heroPrev.spin.children[0]);
+  heroPrev.spin.add(makeBoy(HEROES[heroSel]).group);
+  $('#heroName').textContent = HEROES[heroSel].name;
+}
+function pickHero(d) {
+  heroSel = HERO_IDS[(HERO_IDS.indexOf(heroSel) + d + HERO_IDS.length) % HERO_IDS.length];
+  showHeroPreview(); initAudio(); sfx.pop();
+  speak(STORY.heroes[heroSel].line);
+}
+$('#heroPrev').onclick = () => pickHero(-1);
+$('#heroNext').onclick = () => pickHero(1);
+function updateHeroPreview(dt) {
+  if (!heroPrev) return;
+  const { r, sc, cam, spin, cv } = heroPrev, w = cv.clientWidth, h = cv.clientHeight;
+  if (!w || !h) return;
+  if (cv.width !== Math.round(w * r.getPixelRatio())) { r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix(); }
+  spin.rotation.y += dt * 0.9; r.render(sc, cam);
+}
+function closeHeroPreview() { if (heroPrev) { heroPrev.r.dispose(); heroPrev.r.forceContextLoss(); heroPrev = null; } }
+setupHeroPreview();
+
+// ───────── 가방: 모은 물건 ─────────
+const ITEMS = STORY.items || [];
+const ITEM = Object.fromEntries(ITEMS.map(i => [i.id, i]));
+if (!save.bag) { // 이전 진행에서 이미 얻었을 것들을 채워 둔다
+  save.bag = {};
+  if (save.flashlight) save.bag.flashlight = 1;
+  if (save.step > MISSIONS.findIndex(m => m.type === 'fetch')) save.bag.ball = 1;
+  const gemOf = { ch1: 'gem_green', ch2: 'gem_blue', ch3: 'gem_yellow', ch4: 'sun', ch5: 'sun', ch6: 'sun' };
+  for (const ch of CHAPTERS) if (gemOf[ch.id] && gemDone(ch)) save.bag[gemOf[ch.id]] = (save.bag[gemOf[ch.id]] || 0) + 1;
+  persist();
+}
+function addItem(id, n = 1, announce = true) {
+  if (!ITEM[id]) return;
+  save.bag[id] = (save.bag[id] || 0) + n; persist();
+  const b = $('#bagBtn'); b.classList.remove('bump'); b.offsetHeight; b.classList.add('bump');
+  if (announce) say(ITEM[id].got, true, 2200);
+}
+function openBag() {
+  sfx.pop(); hush(); $('#bagWallet').textContent = `⭐ ${save.wallet}`;
+  const grid = $('#bagGrid'); grid.innerHTML = '';
+  const groups = [['🏅 소중한 것', ['gem', 'tool']], ['🌿 자연 보물', ['nature', 'treasure']], ['🥋 발차기 전리품', ['loot']]];
+  let any = false;
+  for (const [title, kinds] of groups) {
+    const h = document.createElement('div'); h.className = 'bagHead'; h.textContent = title; grid.appendChild(h);
+    for (const it of ITEMS.filter(i => kinds.includes(i.kind))) {
+      const n = save.bag[it.id] || 0; if (n) any = true;
+      const el = document.createElement('button'); el.className = 'bitem' + (n ? '' : ' none');
+      el.innerHTML = `<div class="ic">${it.emoji}</div><div>${n ? it.name : '???'}</div>` + (n > 1 ? `<span class="ct">×${n}</span>` : '');
+      el.onclick = () => { if (!n) return; sfx.tap(); $('#bagDesc').textContent = `${it.emoji} ${it.name} — ${it.desc}`; speak(it.desc); };
+      grid.appendChild(el);
+    }
+  }
+  $('#bagDesc').textContent = any ? '물건을 톡 하면 설명을 들려줘요.' : MSG.bagEmpty;
+  if (!any) speak(MSG.bagEmpty);
+  $('#bag').classList.remove('hide');
+  tutEvent('bagOpen');
+}
+$('#bagBtn').onclick = () => { if (playing && !blocked()) openBag(); };
+$('#bagClose').onclick = () => { sfx.pop(); hush(); $('#bag').classList.add('hide'); tutEvent('bagClose'); };
+const TREASURE_BY = { forest: ['pinecone', 'clover', 'feather', 'petal'], valley: ['pebble', 'feather'], beach: ['pebble', 'petal'], cave: ['crystal'], flat: ['pebble'], snow: ['pinecone', 'feather'] };
+function chestTreasure(x, z) { const list = TREASURE_BY[regionAt(x, z)] || ['pebble']; addItem(list[Math.floor(Math.random() * list.length)], 1, false); }
+
+// ───────── 태권도 발차기 · 심술 구름 ─────────
+let kickT = 0, kickKind = 0, finisher = null;
+const KICK_DUR = 0.5;
+function doKick() {
+  if (!playing || blocked() || kickT > 0.05) return;
+  kickT = KICK_DUR; kickKind = (kickKind + 1) % 3;
+  tone(300, 0.18, 'sawtooth', 0.05, 0, 900); tone(160, 0.1, 'triangle', 0.08, 0.12);
+  if (!vSrc && !talkOpen) speak(MSG.kickYap[Math.floor(Math.random() * MSG.kickYap.length)]);
+  if (riding) dismount();
+  tutEvent('kick');
+  const bp = boy.group.position;
+  const foot = bp.clone().add(new V3(Math.sin(boy.group.rotation.y) * 0.9, 0.9, Math.cos(boy.group.rotation.y) * 0.9));
+  spawnSparks(foot, [0xffffff, 0xffe680], 6);
+  // 마무리 발차기
+  if (finisher) { finishBoss(); return; }
+  // 가까운 심술 구름
+  let hit = false;
+  for (const g of grumps) if (!g.gone && flatDist(bp, g.pos) < 2.8) { poofGrump(g); hit = true; }
+  // 악당의 연기 구름도 발차기로 날린다
+  if (!hit) { const near = clouds.filter(c => !c.gone).sort((a, b) => flatDist(a.mesh.position, bp) - flatDist(b.mesh.position, bp))[0]; if (near && flatDist(near.mesh.position, bp) < 5) puffCloud(near); }
+}
+$('#kickBtn').addEventListener('pointerdown', e => { e.preventDefault(); doKick(); });
+addEventListener('keydown', e => { if ((e.code === 'KeyF' || e.code === 'KeyK') && !e.repeat) doKick(); });
+function updateKick(dt) {
+  if (kickT <= 0) { if (boy.model) { boy.model.rotation.y = 0; boy.model.rotation.x = 0; } return; }
+  kickT = Math.max(0, kickT - dt);
+  const k = 1 - kickT / KICK_DUR, sw = Math.sin(k * Math.PI);
+  if (kickKind === 0) { boy.legs[1].rotation.x = -1.8 * sw; boy.legs[0].rotation.x = 0.2 * sw; boy.arms.forEach(a => a.rotation.x = -1.0 * sw); boy.model.rotation.x = -0.15 * sw; }        // 앞차기
+  else if (kickKind === 1) { boy.model.rotation.y = k * Math.PI * 2; boy.legs[0].rotation.x = -1.5 * sw; boy.arms[0].rotation.x = -1.2 * sw; }                                                     // 돌려차기
+  else { boy.arms[1].rotation.x = -1.7 * sw; boy.arms[0].rotation.x = 0.3 * sw; boy.legs[0].rotation.x = 0.3 * sw; boy.legs[1].rotation.x = -0.3 * sw; }                                           // 지르기
+}
+function makeGrump() {
+  const g = new THREE.Group();
+  const m = new THREE.Group(); g.add(m);
+  for (const [x, y, z, r] of [[0, 0, 0, 0.42], [-0.34, -0.06, 0, 0.3], [0.34, -0.06, 0, 0.3], [0, 0.26, -0.05, 0.3]]) m.add(at(blob(r, r * 0.85, r, 0x6d7380, {}, true), x, y, z));
+  for (const s of [-1, 1]) { m.add(at(eye(0.08), 0.14 * s, 0.04, 0.34)); const b = at(blob(0.09, 0.022, 0.025, 0x22262e), 0.14 * s, 0.17, 0.4); b.rotation.z = -0.45 * s; m.add(b); }
+  const mo = mesh(new THREE.TorusGeometry(0.07, 0.018, 5, 10, Math.PI), mat(0x22262e)); mo.position.set(0, -0.1, 0.4); m.add(mo);
+  return { group: g, m };
+}
+const grumps = [];
+let grumpCool = 20;
+function spawnGrump() {
+  const bp = boy.group.position, r0 = regionAt(bp.x, bp.z);
+  for (let tries = 0; tries < 30; tries++) {
+    const a = Math.random() * Math.PI * 2, d = 7 + Math.random() * 7, x = bp.x + Math.cos(a) * d, z = bp.z + Math.sin(a) * d;
+    if (!walkable(x, z) || isWater(x, z) || regionAt(x, z) !== r0) continue;
+    if (colliders.some(c => Math.hypot(x - c.x, z - c.z) < c.r + 0.6)) continue;
+    const made = makeGrump(); scene.add(made.group);
+    const pos = new V3(x, 0, z);
+    made.group.position.set(x, groundH(x, z) + 1.1, z);
+    addXray(made.group, 0xb0b8c8, 0.5);
+    grumps.push({ made, pos, gone: false, k: 1, ph: Math.random() * 6, home: pos.clone() });
+    return;
+  }
+}
+function poofGrump(g) {
+  g.gone = true; g.k = 1;
+  tone(800, 0.25, 'sine', 0.14, 0, 200); tone(400, 0.2, 'triangle', 0.08, 0.05, 1200);
+  spawnSparks(g.made.group.position.clone(), [0x9aa3b5, 0xffffff, 0xd8dee8], 14);
+  addStars(2); addXP(2); addItem('fluff', 1, false); questEvent('kick');
+  if (!save.toldPoof) { save.toldPoof = true; persist(); say(MSG.cloudPoof, true, 2200); }
+}
+function updateGrumps(dt, t) {
+  const bp = boy.group.position;
+  grumpCool -= dt;
+  const alive = grumps.filter(g => !g.gone).length;
+  if (playing && !talkOpen && !finisher && save.found.goldie && save.tutDone && grumpCool < 0 && alive < 3 && !(cur() && cur().type === 'boss')) { spawnGrump(); grumpCool = 35 + Math.random() * 25; }
+  for (let i = grumps.length - 1; i >= 0; i--) {
+    const g = grumps[i], gr = g.made.group;
+    if (g.gone) { g.k -= dt * 2.5; gr.scale.setScalar(Math.max(0.01, 1 + (1 - g.k) * 0.8)); gr.position.y += dt * 2; gr.traverse(o => { if (o.material && o.material.opacity !== undefined) { o.material.transparent = true; } }); if (g.k <= 0) { scene.remove(gr); grumps.splice(i, 1); } continue; }
+    // 둥실둥실 떠다니며 주인공 쪽을 기웃
+    const d = flatDist(bp, g.pos);
+    if (d < 9 && d > 2) { const dir = new V3(bp.x - g.pos.x, 0, bp.z - g.pos.z).normalize(); g.pos.addScaledVector(dir, dt * 0.6); }
+    else g.pos.x = g.home.x + Math.sin(t * 0.3 + g.ph) * 1.5;
+    gr.position.set(g.pos.x, Math.max(0, groundH(g.pos.x, g.pos.z)) + 1.1 + Math.sin(t * 1.8 + g.ph) * 0.15, g.pos.z);
+    gr.rotation.y = Math.atan2(bp.x - g.pos.x, bp.z - g.pos.z);
+    if (d < 9 && !save.toldGrump && !blocked()) { save.toldGrump = true; persist(); say(MSG.minionHere, true, 3500); }
+  }
+  // 얍 버튼 반짝: 가까이 심술 구름이나 마무리 차례
+  const ready = !!finisher || grumps.some(g => !g.gone && flatDist(bp, g.pos) < 2.8);
+  $('#kickBtn').classList.toggle('ready', ready);
+}
+// 악당 마무리: 구름을 다 날리면 얍! 한 번으로 어질어질
+function startFinisher() {
+  const m = cur(); if (!m || m.type !== 'boss') return;
+  finisher = { t: 0, who: m.villain || 'smogi' };
+  say(MSG.bossFinish, true, 4000);
+}
+function finishBoss() {
+  const f = finisher; finisher = null;
+  smogiHurt = 1; sfx.chime();
+  const a = actors[f.who]; if (a) spawnSparks(a.made.group.position.clone(), [0xffd23f, 0xffffff, 0xff8fb1], 22);
+  addItem(f.who === 'jjiri' ? 'bolt' : 'fluff', 1, false);
+  say(MSG.bossDizzy, true, 2000);
+  setTimeout(() => { const m = cur(); if (m && m.type === 'boss') completeMission(); }, 1800);
+}
+function updateFinisher(dt) {
+  if (!finisher) return;
+  finisher.t += dt;
+  if (finisher.t > 18) finishBoss(); // 버튼을 못 찾아도 막히지 않게
+}
+
+// ───────── 튜토리얼 (처음 시작할 때 손가락이 하나씩 짚어 준다) ─────────
+let tut = null;
+const tutRing = new THREE.Mesh(new THREE.TorusGeometry(0.9, 0.12, 8, 28), new THREE.MeshBasicMaterial({ color: 0xffd23f, transparent: true, opacity: 0.9 }));
+tutRing.rotation.x = -Math.PI / 2; tutRing.visible = false; scene.add(tutRing);
+const tutStar = new THREE.Mesh(starGeo, new THREE.MeshStandardMaterial({ color: 0xffd23f, emissive: 0xffb800, emissiveIntensity: 0.6, flatShading: true })); tutStar.visible = false; tutStar.scale.setScalar(1.4); scene.add(tutStar);
+const TUT_STEPS = ['move', 'jump', 'star', 'ride', 'kick', 'bag', 'done'];
+function startTutorial(then) {
+  tut = { i: -1, then, wait: 0 };
+  say(MSG.tutHello, true, 3000);
+  setTimeout(() => nextTut(), 2800);
+}
+function tutCard(text, n) {
+  const box = $('#mission'); box.classList.remove('hide');
+  $('#mIcon').textContent = '🎓'; $('#mText').textContent = text; $('#mStep').textContent = `연습 ${n} / ${TUT_STEPS.length - 1}`;
+}
+function nextTut() {
+  if (!tut) return;
+  tut.i++; tut.sub = 0;
+  const s = TUT_STEPS[tut.i], bp = boy.group.position;
+  tutRing.visible = false; tutStar.visible = false; tut.goal = null;
+  if (s === 'move') {
+    let p = new V3(bp.x, 0, bp.z - 6); if (!walkable(p.x, p.z)) p = new V3(bp.x + 5, 0, bp.z);
+    tut.target = p; tutRing.position.set(p.x, groundH(p.x, p.z) + 0.08, p.z); tutRing.visible = true; tut.goal = { pos: p, look: p };
+    tutCard('끌어서 반짝이는 동그라미까지 가요', 1); say(MSG.tutMove, true, 6000);
+  } else if (s === 'jump') { tutCard('점프 버튼을 눌러요', 2); say(MSG.tutJump, true, 4000); }
+  else if (s === 'star') {
+    const p = new V3(bp.x + 2.5, 0, bp.z - 2.5); tut.target = p; tutStar.position.set(p.x, groundH(p.x, p.z) + 0.7, p.z); tutStar.visible = true; tut.goal = { pos: p, look: p };
+    tutCard('반짝이는 별을 주워요', 3); say(MSG.tutStar, true, 4000);
+  } else if (s === 'ride') { tutCard('타기 버튼으로 골디를 타요', 4); say(MSG.tutRide, true, 4000); }
+  else if (s === 'kick') { tutCard('얍 버튼으로 발차기!', 5); say(MSG.tutKick, true, 4000); }
+  else if (s === 'bag') { tutCard('가방을 열어 봐요', 6); say(MSG.tutBag, true, 4000); }
+  else {
+    $('#tutHand').classList.add('hide');
+    sfx.chime(); spawnSparks(bp.clone().setY(bp.y + 1.6), [0xff6b6b, 0xffd23f, 0x5cd65c, 0x4da6ff], 24); addStars(3);
+    say(MSG.tutDone, true, 3000);
+    save.tutDone = true; persist();
+    const then = tut.then; tut = null;
+    setTimeout(() => then && then(), 2800);
+  }
+}
+function tutEvent(type, v) {
+  if (!tut) return;
+  const s = TUT_STEPS[tut.i];
+  if (s === 'jump' && type === 'jump') setTimeout(nextTut, 900);
+  else if (s === 'ride' && type === 'ride') { if (v && tut.sub === 0) { tut.sub = 1; setTimeout(() => { if (tut) say(MSG.tutRideOff, true, 3000); }, 1500); } else if (!v && tut.sub === 1) { tut.sub = 2; setTimeout(nextTut, 700); } }
+  else if (s === 'kick' && type === 'kick') setTimeout(nextTut, 1000);
+  else if (s === 'bag' && type === 'bagOpen' && tut.sub === 0) { tut.sub = 1; setTimeout(() => { if (tut) say(MSG.tutBagClose, true, 3000); }, 2500); }
+  else if (s === 'bag' && type === 'bagClose' && tut.sub >= 1) setTimeout(nextTut, 500);
+}
+function handAt(el) { const h = $('#tutHand'); h.classList.remove('hide', 'swipe'); const r = el.getBoundingClientRect(); h.style.left = (r.left + r.width / 2) + 'px'; h.style.top = (r.top + r.height * 0.55) + 'px'; }
+function updateTutorial(dt, t) {
+  if (!tut || tut.i < 0) { if (!tut) $('#tutHand').classList.add('hide'); return; }
+  const s = TUT_STEPS[tut.i], bp = boy.group.position;
+  const busy = cardOpen || talkOpen;
+  if (s === 'move') {
+    tutRing.scale.setScalar(1 + Math.sin(t * 3) * 0.08);
+    const h = $('#tutHand'); h.classList.remove('hide'); h.classList.add('swipe'); h.style.left = (innerWidth * 0.5) + 'px'; h.style.top = (innerHeight * 0.78) + 'px';
+    if (flatDist(bp, tut.target) < 1.4 && tutRing.visible) { tutRing.visible = false; sfx.pop(); nextTut(); }
+  } else if (s === 'jump') handAt($('#jumpBtn'));
+  else if (s === 'star') {
+    $('#tutHand').classList.add('hide');
+    tutStar.rotation.y = t * 2; tutStar.position.y = groundH(tut.target.x, tut.target.z) + 0.7 + Math.sin(t * 2) * 0.1;
+    if (tutStar.visible && flatDist(bp, tut.target) < 1.2) { tutStar.visible = false; sfxStar(); addStars(1, tut.target.clone().setY(0.8)); nextTut(); }
+  } else if (s === 'ride') handAt($('#rideBtn'));
+  else if (s === 'kick') handAt($('#kickBtn'));
+  else if (s === 'bag') handAt(tut.sub === 0 ? $('#bagBtn') : $('#bagClose'));
+  if (busy) $('#tutHand').classList.add('hide');
+}
+$('#setTut').onclick = () => { $('#settings').classList.add('hide'); if (playing && !tut) startTutorial(() => paintMission()); };
+
 // ───────── 날씨: 2부엔 먹구름·비, 눈 덮인 산엔 눈 (깜빡임 없이 천천히) ─────────
 const STORM_FROM = MISSIONS.findIndex(m => m.storm);
 const rain = (() => {
@@ -3268,6 +3552,8 @@ function frame() {
   // 미니게임·악당
   updateItems(dt, t); updateClouds(dt, t); updateSumo(dt, t);
   updateStars(dt, t); updateChests(dt, t); updateSparks(dt); updateMusic(); updateFishing(dt, t);
+  updateKick(dt); updateGrumps(dt, t); updateFinisher(dt); updateTutorial(dt, t);
+  if (!playing) updateHeroPreview(dt);
   $('#actBtns').classList.toggle('hide', !playing || blocked());
   updateEndless(dt, t, moving); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
   if (smogiHurt > 0) smogiHurt = Math.max(0, smogiHurt - dt * 0.6);
@@ -3367,6 +3653,7 @@ $('#startBtn').onclick = () => {
   if (document.body.classList.contains('phone')) goFullscreen();
   initAudio(); sfx.pop(); preloadVoices();
   if (window.speechSynthesis) { pickVoice(); speechSynthesis.speak(new SpeechSynthesisUtterance('')); } // iOS 음성 잠금 풀기
+  save.hero = heroSel; persist(); setHero(heroSel); closeHeroPreview();
   $('#title').classList.add('hide'); playing = true; $('#actBtns').classList.remove('hide'); paintWallet();
   rollVisitors(); refillBoard(); makeBuddy(save.buddy); refreshHud();
   const tellVisitors = () => { if (talkOpen || blocked()) { setTimeout(tellVisitors, 3000); return; } save.toldVisitors = true; persist(); say(NEW_DAY ? [MSG.newDay, MSG.visitorsHere] : MSG.visitorsHere, true, 5000); };
@@ -3396,4 +3683,4 @@ $('#setReset').onclick = () => { if (confirm('도감과 진행을 모두 지우�
 $('#setClose').onclick = () => $('#settings').classList.add('hide');
 
 // 시험용 (부모 확인)
-window.__game = { visitorCs, rollVisitors, setBuddy, get buddy() { return buddy; }, questEvent, openBoard,  openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };
+window.__game = { get tut() { return tut; }, doKick, get grumps() { return grumps; }, spawnGrump, get finisher() { return finisher; }, openBag, pickHero,  visitorCs, rollVisitors, setBuddy, get buddy() { return buddy; }, questEvent, openBoard,  openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };

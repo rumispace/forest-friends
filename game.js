@@ -2405,6 +2405,13 @@ function drawMini(t) {
     mctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; mctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); }
     mctx.closePath(); mctx.fill(); mctx.stroke();
   }
+  if (qGoalCache) {
+    let [x, y] = M(qGoalCache.look.x, qGoalCache.look.z);
+    const dx = x - h, dy = y - h, dd = Math.hypot(dx, dy), lim = h - miniSize * 0.08;
+    if (dd > lim) { x = h + dx / dd * lim; y = h + dy / dd * lim; }
+    const r = miniSize * 0.05; mctx.fillStyle = '#5cb8ff'; mctx.strokeStyle = '#1f6fb0'; mctx.lineWidth = 2;
+    mctx.beginPath(); for (let i = 0; i < 10; i++) { const a = -Math.PI / 2 + i * Math.PI / 5, rr = i % 2 ? r * 0.45 : r; mctx.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } mctx.closePath(); mctx.fill(); mctx.stroke();
+  }
   const [gx, gy] = M(goldie.group.position.x, goldie.group.position.z);
   mctx.fillStyle = '#e2a554'; mctx.strokeStyle = '#fff'; mctx.lineWidth = 2; mctx.beginPath(); mctx.arc(gx, gy, miniSize * 0.03, 0, 7); mctx.fill(); mctx.stroke();
   const a = boy.group.rotation.y, sz = miniSize * 0.055;
@@ -2776,6 +2783,7 @@ function landFish() {
   const size = isJunk ? 0 : Math.round(c.min + Math.random() * (c.max - c.min));
   const isNew = !isJunk && !save.fishLog[c.id];
   if (!isJunk) save.fishLog[c.id] = Math.max(save.fishLog[c.id] || 0, size);
+  save.fishCount = (save.fishCount || 0) + 1; if (save.fishCount >= 2) save.fishPro = true;
   persist(); paintFishCount();
   $('#fcEmoji').textContent = c.emoji; $('#fcName').textContent = (isNew ? '🆕 ' : '') + c.name;
   $('#fcSize').textContent = isJunk ? '물이 깨끗해졌어요 ✨' : `${size}cm`;
@@ -3008,7 +3016,7 @@ function openBoard() {
     const el = document.createElement('button');
     el.className = 'qitem' + (save.board.active === id ? ' on' : '');
     el.innerHTML = `<div class="qi">${q.icon}</div><div class="qt">${q.text}</div><div class="qr">⭐ ${q.reward}</div>`;
-    el.onclick = () => { sfx.tap(); save.board.active = id; save.board.prog = 0; persist(); paintQuest(); speak([MSG.questPick, q.text]); openBoard(); };
+    el.onclick = () => { sfx.tap(); save.board.active = id; save.board.prog = 0; persist(); paintQuest(); $('#board').classList.add('hide'); goQuest(true); };
     list.appendChild(el);
   }
   $('#board').classList.remove('hide');
@@ -3030,7 +3038,55 @@ function questDone(q) {
   refillBoard();
 }
 $('#boardBtn').onclick = () => { if (playing && !blocked()) openBoard(); };
-$('#questTrack').onclick = () => { if (playing && !blocked()) openBoard(); };
+$('#questTrack').onclick = () => { if (!playing || blocked()) return; if (curQuest()) { sfx.pop(); goQuest(false); } else openBoard(); };
+// 의뢰 목적지 (없으면 null)
+function questGoal(q) {
+  if (!q) return null;
+  const bp = boy.group.position, near = list => list.sort((a, b) => flatDist(a, bp) - flatDist(b, bp))[0];
+  if (q.type === 'fish') { const sp = FISH_SPOTS.find(f => f.kind === q.place); return sp ? { pos: new V3(sp.x, 0, sp.z), look: new V3(sp.x, 0, sp.z) } : null; }
+  if (q.type === 'stars') { const s0 = near(starSpots.filter((s, i) => !starGot(i) && regionAt(s.x, s.z) === q.region)); return s0 ? { pos: new V3(s0.x, 0, s0.z), look: new V3(s0.x, 0, s0.z) } : null; }
+  if (q.type === 'find') { const c = visitorCs.find(c => c.vis.id === q.target); return c && c.vis.active ? { pos: c.stand.clone(), look: c.anchor.clone(), c } : null; }
+  if (q.type === 'chest') { const c = near(chests.filter(c => !c.opened && regionOpen(regionAt(c.x, c.z)))); return c ? { pos: new V3(c.x, 0, c.z), look: new V3(c.x, 0, c.z) } : null; }
+  if (q.type === 'buddy') { const p = q.region === 'forest' ? SPOT.start : DOOR[q.region][1]; return { pos: p.clone(), look: p.clone() }; }
+  if (q.type === 'kick') { let g = near(grumps.filter(g => !g.gone).map(g => Object.assign(g.pos.clone(), { g }))); if (!g) { spawnGrump(); g = near(grumps.filter(g => !g.gone).map(g => g.pos.clone())); } return g ? { pos: g.clone(), look: g.clone() } : null; }
+  return null;
+}
+function goQuest(first) {
+  const q = curQuest(); if (!q) return;
+  const hint = MSG['go_' + (q.type === 'stars' ? 'stars' : q.type)];
+  speak(first ? [q.text, hint].filter(Boolean) : [hint || q.text]);
+  if (q.type === 'buddy' && !buddy) { say(MSG.go_buddy, false, 5000); return; }
+  const g = questGoal(q); if (!g) return;
+  pendingCreature = g.c || null; walkTo(g.pos.clone());
+}
+// 의뢰 목적지 표시: 파란 빛기둥
+const qBeacon = (() => {
+  const m = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.7, 12, 16, 1, true), new THREE.MeshBasicMaterial({ color: 0x66b8ff, transparent: true, opacity: 0.22, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, fog: false }));
+  m.renderOrder = 3; m.visible = false; scene.add(m); return m;
+})();
+const helpHand = document.createElement('div'); helpHand.id = 'helpHand'; helpHand.textContent = '👆'; helpHand.className = 'hide'; document.body.appendChild(helpHand);
+function helpAt(el) { const r = el.getBoundingClientRect(); helpHand.classList.remove('hide'); helpHand.style.left = (r.left + r.width / 2) + 'px'; helpHand.style.top = (r.top + r.height * 0.55) + 'px'; }
+let qGoalCache = null, qGoalT = 0, fishHintAt = null;
+function updateQuestGuide(dt, t) {
+  const q = playing ? curQuest() : null;
+  qGoalT -= dt; if (qGoalT < 0) { qGoalT = 1; qGoalCache = questGoal(q); }
+  const g = blocked() ? null : qGoalCache, bp = boy.group.position;
+  qBeacon.visible = !!g && flatDist(bp, g.look) > 2.5;
+  if (qBeacon.visible) { qBeacon.position.set(g.look.x, Math.max(0, groundH(g.look.x, g.look.z)) + 6, g.look.z); qBeacon.material.opacity = 0.16 + 0.07 * Math.sin(t * 1.5 + 1); }
+  // 낚시 손가락 안내: 낚시터에선 낚시 버튼, 낚시 중엔 지금 누를 곳
+  let hand = null;
+  if (fishing && !$('#fish').classList.contains('hide')) {
+    const st = fishing.state;
+    ['fs1', 'fs2', 'fs3'].forEach((id, i) => $('#' + id).classList.toggle('now', (i === 0 && st === 'ready') || (i === 1 && (st === 'cast' || st === 'wait' || st === 'bite')) || (i === 2 && st === 'reel')));
+    if ((st === 'ready' && !save.fishPro) || st === 'bite' || (st === 'reel' && !save.fishPro)) hand = fishCv;
+  } else if (!blocked() && !$('#fishBtn').classList.contains('hide') && (!save.fishPro || (q && q.type === 'fish'))) {
+    hand = $('#fishBtn');
+    const sp = nearFishSpot();
+    if (sp && fishHintAt !== sp) { fishHintAt = sp; say(MSG.fishBtnHint, true, 3000); }
+  }
+  if (!nearFishSpot()) fishHintAt = null;
+  if (hand && !(typeof tut !== 'undefined' && tut)) helpAt(hand); else helpHand.classList.add('hide');
+}
 $('#boardClose').onclick = () => { sfx.pop(); $('#board').classList.add('hide'); };
 
 function updateEndless(dt, t, moving) {
@@ -3574,7 +3630,7 @@ function frame() {
   updateKick(dt); updateGrumps(dt, t); updateFinisher(dt); updateTutorial(dt, t);
   if (!playing) updateHeroPreview(dt);
   $('#actBtns').classList.toggle('hide', !playing || blocked());
-  updateEndless(dt, t, moving); autoSave(dt); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
+  updateEndless(dt, t, moving); autoSave(dt); updateQuestGuide(dt, t); // 겹창이 뜨면 점프·타기 버튼은 숨긴다
   if (smogiHurt > 0) smogiHurt = Math.max(0, smogiHurt - dt * 0.6);
   const bossWho = cur() && cur().type === 'boss' ? (cur().villain || 'smogi') : null;
   for (const [who, v] of Object.entries(actors)) {

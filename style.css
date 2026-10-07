@@ -348,3 +348,12 @@ body.iosweb #homeTip { display: block; }
 html, body { touch-action: manipulation; overscroll-behavior: none; -webkit-text-size-adjust: 100%; }
 button, .round, .act, .pill { touch-action: manipulation; }
 .panel { touch-action: pan-y; overscroll-behavior: contain; }
+
+/* 낚시 3단계 안내 */
+.fishSteps { display: flex; gap: 8px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+.fishSteps span { font-size: 17px; background: #eef4f8; color: #5a6a7a; border-radius: 12px; padding: 4px 10px; transition: background .3s, color .3s, transform .3s; }
+.fishSteps span.now { background: #ffd23f; color: #3b2a1a; transform: scale(1.08); }
+.qtrack.on::after { content: ' 👣'; }
+@media (orientation: landscape) and (max-height: 500px) { .fishSteps span { font-size: 12px; padding: 2px 7px; } .fishSteps { margin-top: 4px; gap: 4px; } }
+#helpHand { position: fixed; z-index: 30; font-size: 60px; pointer-events: none; transform: translate(-30%, 10%); animation: tap 1.1s ease-in-out infinite; filter: drop-shadow(0 4px 4px rgba(0,0,0,.3)); }
+@media (orientation: landscape) and (max-height: 500px) { #helpHand { font-size: 42px; } }

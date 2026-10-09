@@ -1058,6 +1058,10 @@ const keepOut = [[SPOT.start, 7], [new V3(0, 0, 14), 5], [SPOT.bigOak, 4.5], [SP
   [SPOT.minnow, 5], [SPOT.crayRock, 4], [SPOT.kfTree, 4], [SPOT.crab, 5], [SPOT.hermit, 4], [SPOT.pool, 5],
   [SPOT.oakBoss, 5], [SPOT.fallBoss, 5], [SPOT.kingBoss, 7], [SPOT.mudMound, 5], [SPOT.fiddler, 4], [SPOT.spoonPuddle, 5], [SPOT.flatBoss, 6],
   [SPOT.hare, 4], [SPOT.goralRock, 5], [SPOT.owlTree, 4], [SPOT.snowBoss, 6], ...CHEST_SPOTS.map(([x, z]) => [new V3(x, 0, z), 2]), ...Object.values(ITEM_SPOTS).flat().map(([x, z]) => [new V3(x, 0, z), 1.6])];
+// 미션 장소마다 화면 앞쪽(남쪽)을 비워 시야 확보 (아이: 초반 숲 나무가 가린다)
+for (const k of ['log', 'cicadaTree', 'bush', 'bigOak', 'ball', 'pond', 'oakBoss', 'kingBoss']) { const p = SPOT[k]; keepOut.push([new V3(p.x, 0, p.z + 4), 3.6], [new V3(p.x, 0, p.z + 8), 3.2]); }
+for (let z = -26; z <= 10; z += 4) keepOut.push([new V3(0, 0, z), 3]);     // 가운데 남북 길
+for (let x = -26; x <= 26; x += 4) keepOut.push([new V3(x, 0, 2), 2.6]);   // 가운데 동서 길
 function freeAt(x, z, r) {
   for (const [p, k] of keepOut) if (Math.hypot(x - p.x, z - p.z) < k + r) return false;
   for (const c of colliders) if (Math.hypot(x - c.x, z - c.z) < c.r + r + 0.6) return false;
@@ -1099,7 +1103,7 @@ for (let n = 0; n < 220; n++) {
   const kind = rand() < 0.4 ? 'pine' : (rand() < 0.8 ? 'round' : 'oak');
   const s = R(0.85, 1.25);
   place(makeTree(kind, s), x, z, TRUNK_R[kind] * s + 0.25);
-  if (colliders.length > 75) break;
+  if (colliders.length > 52) break;
 }
 // ── 계곡 ──
 {
@@ -1272,7 +1276,7 @@ for (let n = 0; n < 900; n++) {
 for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + 0.3; if (Math.cos(a) > 0.55) continue; const m = blob(R(22, 30), R(12, 18), R(16, 24), i % 2 ? 0x76a98a : 0x6b9d80); m.position.set(25 + Math.cos(a) * 130, -2, -25 + Math.sin(a) * 120); m.castShadow = false; deco.add(m); }
 
 // 카메라와 주인공 사이에 있는 장식은 동그랗게 비워서 주인공이 보이게 한다 (게임에서 흔히 쓰는 '투시 구멍')
-const SEE = { uBoy: { value: new V3() }, uCam: { value: new V3() }, uR: { value: 2.6 } };
+const SEE = { uBoy: { value: new V3() }, uCam: { value: new V3() }, uR: { value: 3.2 } };
 const seeCache = new Map();
 function seeThrough(m) {
   if (seeCache.has(m)) return seeCache.get(m);
@@ -1283,10 +1287,14 @@ function seeThrough(m) {
     sh.fragmentShader = 'uniform vec3 uBoy;\nuniform vec3 uCam;\nuniform float uR;\nvarying vec3 vSeeW;\n' + sh.fragmentShader.replace('void main() {', `void main() {
   {
     vec3 seg = uBoy - uCam; float L = length(seg); vec3 dir = seg / L; float t = dot(vSeeW - uCam, dir);
+    float dith = mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y) * 2.0, 4.0);
     if (t > 0.0 && t < L - 0.8) {
-      float dist = length(vSeeW - (uCam + dir * t)); float rr = uR * (0.45 + 0.55 * t / L);
-      if (dist < rr && (dist < rr * 0.75 || mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0)) discard;
+      float dist = length(vSeeW - (uCam + dir * t)); float rr = uR * (0.55 + 0.45 * t / L);
+      if (dist < rr && (dist < rr * 0.75 || dith < 2.0)) discard;
     }
+    // 주인공보다 화면 아래쪽(카메라 쪽) 넓은 띠: 4칸 중 3칸 비워서 희미하게만
+    vec2 rel = vSeeW.xz - uBoy.xz;
+    if (rel.y > 0.6 && rel.y < 11.0 && abs(rel.x) < 7.5 - rel.y * 0.15 && dith < 3.0) discard;
   }`);
   };
   c.customProgramCacheKey = () => 'see-' + m.uuid;

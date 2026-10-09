@@ -1271,6 +1271,27 @@ for (let n = 0; n < 900; n++) {
 // 먼 산
 for (let i = 0; i < 12; i++) { const a = i / 12 * Math.PI * 2 + 0.3; if (Math.cos(a) > 0.55) continue; const m = blob(R(22, 30), R(12, 18), R(16, 24), i % 2 ? 0x76a98a : 0x6b9d80); m.position.set(25 + Math.cos(a) * 130, -2, -25 + Math.sin(a) * 120); m.castShadow = false; deco.add(m); }
 
+// 카메라와 주인공 사이에 있는 장식은 동그랗게 비워서 주인공이 보이게 한다 (게임에서 흔히 쓰는 '투시 구멍')
+const SEE = { uBoy: { value: new V3() }, uCam: { value: new V3() }, uR: { value: 2.6 } };
+const seeCache = new Map();
+function seeThrough(m) {
+  if (seeCache.has(m)) return seeCache.get(m);
+  const c = m.clone();
+  c.onBeforeCompile = sh => {
+    sh.uniforms.uBoy = SEE.uBoy; sh.uniforms.uCam = SEE.uCam; sh.uniforms.uR = SEE.uR;
+    sh.vertexShader = 'varying vec3 vSeeW;\n' + sh.vertexShader.replace('#include <project_vertex>', '#include <project_vertex>\n  vSeeW = (modelMatrix * vec4(transformed, 1.0)).xyz;');
+    sh.fragmentShader = 'uniform vec3 uBoy;\nuniform vec3 uCam;\nuniform float uR;\nvarying vec3 vSeeW;\n' + sh.fragmentShader.replace('void main() {', `void main() {
+  {
+    vec3 seg = uBoy - uCam; float L = length(seg); vec3 dir = seg / L; float t = dot(vSeeW - uCam, dir);
+    if (t > 0.0 && t < L - 0.8) {
+      float dist = length(vSeeW - (uCam + dir * t)); float rr = uR * (0.45 + 0.55 * t / L);
+      if (dist < rr && (dist < rr * 0.75 || mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0)) discard;
+    }
+  }`);
+  };
+  c.customProgramCacheKey = () => 'see-' + m.uuid;
+  seeCache.set(m, c); return c;
+}
 // 장식을 재질별로 한 덩어리로 (iPad 그리기 횟수 줄이기)
 function bake(root) {
   root.updateMatrixWorld(true);
@@ -1290,7 +1311,7 @@ function bake(root) {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.BufferAttribute(pos, 3)); geo.setAttribute('normal', new THREE.BufferAttribute(nor, 3));
     geo.computeBoundingSphere();
-    const mm = new THREE.Mesh(geo, m); mm.castShadow = true; mm.receiveShadow = true; out.add(mm);
+    const mm = new THREE.Mesh(geo, seeThrough(m)); mm.castShadow = true; mm.receiveShadow = true; out.add(mm);
   }
   return out;
 }
@@ -1658,7 +1679,7 @@ function setNight(on) { nightTarget = on ? 1 : 0; save.night = on; persist(); re
 
 // ───────── 화면 크기 ─────────
 let camDist = 1, camAhead = 2;
-const CAM_OFF = new V3(0, 6.5, 10);
+const CAM_OFF = new V3(0, 7.6, 9.4);
 function resize() {
   const w = innerWidth, h = innerHeight;
   renderer.setSize(w, h); camera.aspect = w / h;
@@ -1901,7 +1922,7 @@ function paintMission() {
   $('#mStep').textContent = `${ch.title.split('.')[0]} · 미션 ${step + 1} / ${MISSIONS.length}`;
   box.classList.remove('hide');
 }
-function openGate(region) { const g = gates[region]; if (!g || g.open) return; g.open = true; g.opening = true; sfx.item(); }
+function openGate(region) { const g = gates[region]; if (!g || g.open) return; g.open = true; g.opening = true; navDirty = true; sfx.item(); }
 function clearMissionStuff() {
   for (const it of items) scene.remove(it.mesh); items = [];
   for (const c of clouds) scene.remove(c.mesh); clouds = [];
@@ -2165,7 +2186,9 @@ function isTarget(c) { if (c.vis) return true; const m = cur(); return !m || (m.
 
 const cvEl = renderer.domElement;
 cvEl.addEventListener('pointerdown', e => {
-  if (blocked() || ptr) return;
+  if (blocked()) return;
+  if (ptr && ptr.id !== e.pointerId) { if (performance.now() - ptr.t < 1500 || joy) return; ptr = null; joy = null; hold = null; $('#joy').classList.add('hide'); } // 오래 남은 손가락 기록은 버린다
+  try { cvEl.setPointerCapture(e.pointerId); } catch (er) {}
   setNdc(e);
   const cl = pickCloud();
   if (cl) { puffCloud(cl); return; }
@@ -2213,9 +2236,71 @@ function endPointer(e, cancelled) {
 }
 cvEl.addEventListener('pointerup', e => endPointer(e, false));
 cvEl.addEventListener('pointercancel', e => endPointer(e, true));
+addEventListener('pointerup', e => endPointer(e, false));       // 버튼·창 위에서 손을 떼도
+addEventListener('pointercancel', e => endPointer(e, true));
+addEventListener('blur', () => { ptr = null; joy = null; $('#joy').classList.add('hide'); });
 
+// ── 길찾기: 1칸=1m 격자, 막힌 칸(못 가는 곳·나무 둘레)을 피해 A* 로 찾고, 곧게 펴서 걷는다
+const NAV = { x0: -96, z0: -88, w: 198, h: 182 };
+let navBlocked = null, navWater = null, navDirty = true;
+function buildNav() {
+  const { x0, z0, w, h } = NAV, b = new Uint8Array(w * h), wt = new Uint8Array(w * h);
+  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) { const x = x0 + i + 0.5, z = z0 + j + 0.5; if (!walkable(x, z)) b[j * w + i] = 1; else if (isWater(x, z)) wt[j * w + i] = 1; }
+  for (const c of colliders) {
+    const r = c.r + 0.45;
+    for (let j = Math.floor(c.z - r - z0); j <= Math.ceil(c.z + r - z0); j++) for (let i = Math.floor(c.x - r - x0); i <= Math.ceil(c.x + r - x0); i++) {
+      if (i < 0 || j < 0 || i >= w || j >= h) continue;
+      if (Math.hypot(x0 + i + 0.5 - c.x, z0 + j + 0.5 - c.z) < r) b[j * w + i] = 1;
+    }
+  }
+  navBlocked = b; navWater = wt; navDirty = false;
+}
+const cellOf = p => [Math.floor(p.x - NAV.x0), Math.floor(p.z - NAV.z0)];
+const free = (i, j) => i >= 0 && j >= 0 && i < NAV.w && j < NAV.h && !navBlocked[j * NAV.w + i];
+function nearestFree(i, j) {
+  if (free(i, j)) return [i, j];
+  for (let r = 1; r < 6; r++) for (let dj = -r; dj <= r; dj++) for (let di = -r; di <= r; di++) if (Math.max(Math.abs(di), Math.abs(dj)) === r && free(i + di, j + dj)) return [i + di, j + dj];
+  return null;
+}
+function lineFree(a, b) { // 두 점 사이가 막힘 없이 곧게 이어지나
+  const d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.ceil(d / 0.4);
+  for (let k = 1; k < n; k++) { const x = a.x + (b.x - a.x) * k / n, z = a.z + (b.z - a.z) * k / n; const [i, j] = cellOf({ x, z }); if (!free(i, j)) return false; }
+  return true;
+}
+function findPath(from, to) {
+  if (navDirty || !navBlocked) buildNav();
+  const s = nearestFree(...cellOf(from)), g = nearestFree(...cellOf(to));
+  if (!s || !g) return null;
+  const W = NAV.w, N = W * NAV.h, start = s[1] * W + s[0], goal = g[1] * W + g[0];
+  const gs = new Float32Array(N).fill(Infinity), came = new Int32Array(N).fill(-1), closed = new Uint8Array(N);
+  const heap = []; const push = (n, f) => { heap.push([f, n]); let i = heap.length - 1; while (i > 0) { const p = (i - 1) >> 1; if (heap[p][0] <= heap[i][0]) break; [heap[p], heap[i]] = [heap[i], heap[p]]; i = p; } };
+  const pop = () => { const top = heap[0], last = heap.pop(); if (heap.length) { heap[0] = last; let i = 0; for (;;) { const l = i * 2 + 1, r = l + 1; let m = i; if (l < heap.length && heap[l][0] < heap[m][0]) m = l; if (r < heap.length && heap[r][0] < heap[m][0]) m = r; if (m === i) break; [heap[m], heap[i]] = [heap[i], heap[m]]; i = m; } } return top[1]; };
+  const hx = n => { const dx = Math.abs(n % W - g[0]), dz = Math.abs(((n / W) | 0) - g[1]); return Math.max(dx, dz) + 0.414 * Math.min(dx, dz); };
+  gs[start] = 0; push(start, hx(start));
+  let iter = 0;
+  while (heap.length && iter++ < 60000) {
+    const n = pop(); if (n === goal) break; if (closed[n]) continue; closed[n] = 1;
+    const ci = n % W, cj = (n / W) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++) {
+      if (!di && !dj) continue; const ni = ci + di, nj = cj + dj; if (!free(ni, nj)) continue;
+      if (di && dj && (!free(ci + di, cj) || !free(ci, cj + dj))) continue; // 모서리 끼기 방지
+      const m = nj * W + ni, cost = (di && dj ? 1.414 : 1) * (navWater[m] ? 2.5 : 1);
+      if (gs[n] + cost < gs[m]) { gs[m] = gs[n] + cost; came[m] = n; push(m, gs[m] + hx(m)); }
+    }
+  }
+  if (came[goal] < 0 && goal !== start) return null;
+  const cells = []; for (let n = goal; n !== -1; n = came[n]) { cells.push(new V3(NAV.x0 + n % W + 0.5, 0, NAV.z0 + ((n / W) | 0) + 0.5)); if (n === start) break; }
+  cells.reverse();
+  const end = free(...cellOf(to)) ? new V3(to.x, 0, to.z) : cells[cells.length - 1];
+  cells[cells.length - 1] = end;
+  // 곧게 펴기: 막힘 없이 보이는 가장 먼 점으로 바로
+  const out = []; let cur0 = new V3(from.x, 0, from.z), k = 0;
+  while (k < cells.length) { let far = k; for (let m = cells.length - 1; m > k; m--) if (lineFree(cur0, cells[m])) { far = m; break; } out.push(cells[far]); cur0 = cells[far]; k = far + 1; }
+  return out;
+}
 function walkTo(p) {
-  moveQueue = route(boy.group.position, p);
+  const path = findPath(boy.group.position, p);
+  moveQueue = path && path.length ? path : route(boy.group.position, p);
   tapMark.position.set(p.x, Math.max(groundH(p.x, p.z), -0.05) + 0.05, p.z); tapMark.material.opacity = 0.9; tapMark.scale.setScalar(1);
   sfx.tap();
 }
@@ -3613,7 +3698,7 @@ function frame() {
   // 나무 뒤에 숨은 미션 친구·주인공은 실루엣으로 비친다
   if (tgt) setGhost(tgt.made.group, tgt.appear > 0.6 && occluded(tgt.holder.getWorldPosition(tmpV.clone())));
   for (const c of creatures) if (c !== tgt) setGhost(c.made.group, false);
-  setGhost(boy.group, occluded(bp.clone().setY(bp.y + 1)));
+  setGhost(boy.group, false); // 주인공 앞을 가리는 장식은 투시 구멍으로 비우므로 실루엣은 쓰지 않는다
   goldieStar.visible = !!(playing && cur() && cur().type === 'fetch' && fetchState.step === 'carry');
   if (goldieStar.visible) { goldieStar.position.copy(gp).setY(1.9 + Math.sin(t * 2) * 0.1); goldieStar.rotation.y = t * 1.2; }
 
@@ -3704,6 +3789,7 @@ function frame() {
   camera.lookAt(camera.position.x - off.x, camY + 1.6, camera.position.z - off.z - camAhead);
   sun.position.set(bp.x + 12, 22, bp.z + 8); sun.target.position.set(bp.x, 0, bp.z);
 
+  SEE.uBoy.value.set(bp.x, bp.y + 0.9, bp.z); SEE.uCam.value.copy(camera.position);
   renderer.render(scene, camera);
   placeActBtns();
   drawMini(t);
@@ -3807,4 +3893,4 @@ $('#setReset').onclick = () => { if (confirm('도감과 진행을 모두 지우�
 $('#setClose').onclick = () => $('#settings').classList.add('hide');
 
 // 시험용 (부모 확인)
-window.__game = { get tut() { return tut; }, doKick, get grumps() { return grumps; }, spawnGrump, get finisher() { return finisher; }, openBag, pickHero,  visitorCs, rollVisitors, setBuddy, get buddy() { return buddy; }, questEvent, openBoard,  openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };
+window.__game = { colliders, SEE,  get tut() { return tut; }, doKick, get grumps() { return grumps; }, spawnGrump, get finisher() { return finisher; }, openBag, pickHero,  visitorCs, rollVisitors, setBuddy, get buddy() { return buddy; }, questEvent, openBoard,  openFishing, FISH_SPOTS, get fishing() { return fishing; }, fishTap,  renderMusic, MUSIC_CFG, get musicKey() { return musicKey; }, get riding() { return riding; }, setRide, doJump, starSpots, chests,  get simonState() { return simon; }, actors, openSimon, cur, fetchState, completeMission, ballMesh, save, creatures, boy, goldie, setNight, discover, openCard, camera, THREE, gates, walkTo, startMission, items: () => items, clouds: () => clouds, puffCloud, get step() { return step; } };
